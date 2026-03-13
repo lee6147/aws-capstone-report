@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idea C: 이미지 기반 자동 분류/검색 시스템 - AWS 캡스톤</title>
+  <style>
+    :root {
+      --primary: #232f3e;
+      --accent: #ff9900;
+      --accent-light: #fff3e0;
+      --success: #0d904f;
+      --success-bg: #e8f5e9;
+      --warning: #d4760a;
+      --warning-bg: #fff8e1;
+      --danger: #d13212;
+      --danger-bg: #fde8e8;
+      --info: #0073bb;
+      --info-bg: #e1f5fe;
+      --gray-50: #fafafa;
+      --gray-100: #f5f5f5;
+      --gray-200: #eeeeee;
+      --gray-300: #e0e0e0;
+      --gray-600: #757575;
+      --gray-800: #424242;
+      --gray-900: #212121;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.7; color: var(--gray-900); background: var(--gray-100); }
+    .navbar { background: var(--primary); padding: 0 60px; display: flex; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .navbar a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 13px; font-weight: 600; padding: 14px 18px; transition: all 0.2s; border-bottom: 3px solid transparent; white-space: nowrap; }
+    .navbar a:hover { color: #fff; background: rgba(255,255,255,0.05); }
+    .navbar a.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .navbar .nav-brand { color: var(--accent); font-weight: 800; font-size: 14px; padding-right: 24px; margin-right: 8px; border-right: 1px solid rgba(255,255,255,0.15); }
+    .page { max-width: 1100px; margin: 0 auto; background: #fff; box-shadow: var(--shadow-md); }
+    .hero { background: linear-gradient(135deg, var(--primary) 0%, #37475a 100%); color: #fff; padding: 48px 60px 40px; position: relative; overflow: hidden; }
+    .hero::after { content: ''; position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; background: var(--accent); border-radius: 50%; opacity: 0.1; }
+    .hero .badges { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .hero .badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.5px; }
+    .hero .badge-aws { background: var(--accent); color: var(--primary); }
+    .hero .badge-rejected { background: #6b7280; color: #fff; }
+    .hero .badge-cost { background: var(--danger); color: #fff; }
+    .hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
+    .hero .subtitle { font-size: 18px; opacity: 0.85; font-weight: 400; }
+    .hero .meta { margin-top: 24px; display: flex; gap: 32px; font-size: 14px; opacity: 0.75; flex-wrap: wrap; }
+    .hero .meta span { display: flex; align-items: center; gap: 6px; }
+    .content { padding: 40px 60px 60px; }
+    .section { margin-bottom: 48px; }
+    .section-title { font-size: 22px; font-weight: 700; color: var(--primary); padding-bottom: 12px; border-bottom: 3px solid var(--accent); margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+    .section-title .num { background: var(--accent); color: var(--primary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+    h3 { font-size: 17px; font-weight: 700; color: var(--gray-800); margin: 28px 0 12px; }
+    p { margin: 8px 0; font-size: 15px; }
+    .callout { border-radius: var(--radius); padding: 16px 20px; margin: 16px 0; font-size: 14px; }
+    .callout-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .callout.success { background: var(--success-bg); border-left: 4px solid var(--success); }
+    .callout.success .callout-title { color: var(--success); }
+    .callout.warning { background: var(--warning-bg); border-left: 4px solid var(--warning); }
+    .callout.warning .callout-title { color: var(--warning); }
+    .callout.danger { background: var(--danger-bg); border-left: 4px solid var(--danger); }
+    .callout.danger .callout-title { color: var(--danger); }
+    .callout.info { background: var(--info-bg); border-left: 4px solid var(--info); }
+    .callout.info .callout-title { color: var(--info); }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    thead th { background: var(--primary); color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 13px; white-space: nowrap; }
+    thead th:first-child { border-radius: var(--radius) 0 0 0; }
+    thead th:last-child { border-radius: 0 var(--radius) 0 0; }
+    tbody td { padding: 10px 14px; border-bottom: 1px solid var(--gray-200); vertical-align: top; }
+    tbody tr:hover { background: var(--gray-50); }
+    tbody tr:last-child td { border-bottom: none; }
+    td.center, th.center { text-align: center; }
+    td.right, th.right { text-align: right; }
+    .winner { background: #e8f5e9 !important; }
+    .loser { background: #fde8e8 !important; }
+    .code-block { background: #1e1e1e; color: #d4d4d4; border-radius: var(--radius); padding: 16px 20px; font-family: 'Fira Code', 'Consolas', 'Courier New', monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; margin: 12px 0; white-space: pre; }
+    .code-label { display: inline-block; background: var(--accent); color: var(--primary); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; font-family: 'Pretendard', -apple-system, sans-serif; }
+    .code-block .cm { color: #6a9955; }
+    .code-block .ky { color: #9cdcfe; }
+    .code-block .st { color: #ce9178; }
+    .code-block .nm { color: #b5cea8; }
+    .code-block .kw { color: #569cd6; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 20px 0; }
+    .kpi-card { background: var(--gray-50); border-radius: var(--radius); padding: 20px; text-align: center; border: 1px solid var(--gray-200); }
+    .kpi-card .value { font-size: 28px; font-weight: 800; color: var(--primary); }
+    .kpi-card .value.accent { color: var(--accent); }
+    .kpi-card .value.danger { color: var(--danger); }
+    .kpi-card .label { font-size: 13px; color: var(--gray-600); margin-top: 4px; }
+    .compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
+    .compare-card { border: 2px solid var(--gray-200); border-radius: var(--radius); padding: 20px; position: relative; }
+    .compare-card.option-a { border-color: var(--danger); }
+    .compare-card.option-b { border-color: var(--info); }
+    .compare-card.option-c { border-color: var(--success); box-shadow: 0 0 0 3px rgba(13,144,79,0.1); }
+    .compare-card .card-badge { position: absolute; top: -10px; right: 12px; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 10px; color: #fff; }
+    .compare-card.option-c .card-badge { background: var(--success); }
+    .compare-card h4 { font-size: 15px; margin-bottom: 8px; color: var(--primary); }
+    .compare-card .price { font-size: 28px; font-weight: 800; margin: 8px 0; }
+    .compare-card .price small { font-size: 14px; font-weight: 400; color: var(--gray-600); }
+    .compare-card ul { list-style: none; font-size: 13px; color: var(--gray-800); }
+    .compare-card ul li { padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; }
+    .stars { color: var(--accent); letter-spacing: 1px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+    .dot.red { background: var(--danger); }
+    .dot.yellow { background: var(--warning); }
+    .dot.green { background: var(--success); }
+    .checklist { list-style: none; margin: 12px 0; }
+    .checklist li { padding: 8px 0; border-bottom: 1px solid var(--gray-200); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .checklist li::before { content: ''; width: 18px; height: 18px; border: 2px solid var(--gray-300); border-radius: 4px; flex-shrink: 0; }
+    .api-block { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 16px 20px; margin: 12px 0; }
+    .api-block .method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; color: #fff; margin-right: 8px; }
+    .api-block .method.post { background: var(--success); }
+    .api-block .method.get { background: var(--info); }
+    .api-block .path { font-family: 'Fira Code', 'Consolas', monospace; font-weight: 600; font-size: 14px; }
+    .ref-list { margin-left: 20px; }
+    .ref-list li { padding: 4px 0; font-size: 14px; }
+    .ref-list a { color: var(--info); text-decoration: none; }
+    .ref-list a:hover { text-decoration: underline; }
+    .footer { background: var(--gray-50); border-top: 1px solid var(--gray-200); padding: 24px 60px; font-size: 12px; color: var(--gray-600); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    @media print { body { background: #fff; } .page { box-shadow: none; } .navbar { display: none; } .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .section { page-break-inside: avoid; } }
+    @media (max-width: 768px) { .navbar { padding: 0 16px; overflow-x: auto; } .navbar a { padding: 12px 12px; font-size: 12px; } .hero, .content, .footer { padding-left: 24px; padding-right: 24px; } .hero h1 { font-size: 22px; } .hero .meta { flex-direction: column; gap: 8px; } .compare-grid { grid-template-columns: 1fr; } .kpi-grid { grid-template-columns: repeat(2, 1fr); } table { font-size: 12px; } thead th, tbody td { padding: 8px 10px; } .code-block { font-size: 11px; padding: 12px 14px; } }
+  </style>
+</head>
+<body>
+
+<!-- 네비게이션 바 -->
+<nav class="navbar">
+  <a href="index.html" class="nav-brand">AWS CAPSTONE</a>
+  <a href="executive-report.html">Executive Report</a>
+  <a href="idea-a-studybot.html">Idea A: StudyBot</a>
+  <a href="idea-b-news-sentiment.html">Idea B: 뉴스 감정분석</a>
+  <a href="idea-c-image-search.html" class="active">Idea C: 이미지 검색</a>
+</nav>
+
+<div class="page">
+
+  <!-- 헤더 -->
+  <div class="hero">
+    <div class="badges">
+      <span class="badge badge-aws">AWS CAPSTONE 2026</span>
+      <span class="badge badge-rejected">IDEA C &mdash; 미채택</span>
+      <span class="badge badge-cost">$270+ / 15주 &mdash; 비용 초과</span>
+    </div>
+    <h1>이미지 기반 자동 분류/검색 시스템</h1>
+    <div class="subtitle">Rekognition + Bedrock Titan Embeddings + OpenSearch Serverless 벡터 검색 아키텍처</div>
+    <div class="meta">
+      <span>&#128218; AWS실전프로젝트I</span>
+      <span>&#127979; 국민대학교 AWS&middot;양자통신융합전공</span>
+      <span>&#128197; 2026-03-13</span>
+      <span>&#128101; 2~3인 팀</span>
+      <span>&#128336; 15주 (03/06 ~ 06/12)</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- 1. Executive Summary -->
+    <div class="section">
+      <div class="section-title"><span class="num">1</span> Executive Summary</div>
+
+      <div class="callout danger">
+        <div class="callout-title">&#10060; 미채택 사유</div>
+        OpenSearch Serverless 최소 비용이 월 $173~$346으로 15주간 <strong>최소 $270 이상</strong>의 비용이 예상되며, 학생 크레딧 범위 내 운영이 불확실합니다. 공적가치(&ldquo;청소년-교육&rdquo;)와의 직접 연관성도 부족합니다.
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="value danger">$270+</div>
+          <div class="label">15주 최소 비용</div>
+        </div>
+        <div class="kpi-card">
+          <div class="value accent">9</div>
+          <div class="label">AWS 서비스</div>
+        </div>
+        <div class="kpi-card">
+          <div class="value">1024</div>
+          <div class="label">벡터 차원</div>
+        </div>
+        <div class="kpi-card">
+          <div class="value">15주</div>
+          <div class="label">프로젝트 기간</div>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th style="width:140px">관점</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Problem</strong></td><td>대량의 이미지를 수동으로 분류/검색하는 것은 비효율적이며, 텍스트 기반 검색은 시각적 유사성을 포착하지 못한다</td></tr>
+          <tr><td><strong>Solution</strong></td><td>AWS Rekognition으로 자동 태깅하고, Bedrock Titan Embeddings로 벡터화하여 OpenSearch Serverless에서 유사 이미지 검색을 수행하는 서버리스 파이프라인</td></tr>
+          <tr><td><strong>Function/UX</strong></td><td>이미지 업로드만으로 자동 라벨링 + 유사 이미지 검색이 가능한 원스톱 경험</td></tr>
+          <tr><td><strong>Core Value</strong></td><td>서버리스 아키텍처로 운영 부담 최소화, AWS AI 서비스 통합으로 ML 모델 직접 학습 없이 고품질 이미지 분석 제공</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 2. 시스템 아키텍처 -->
+    <div class="section">
+      <div class="section-title"><span class="num">2</span> 시스템 아키텍처 다이어그램</div>
+
+      <h3>2.1 전체 서비스 흐름</h3>
+      <div class="code-block"><span class="code-label">ARCHITECTURE</span>
+                      [사용자]
+                         |
+                         v
+               +-----------------+
+               |  CloudFront     |  (CDN, 정적 웹 호스팅)
+               |  + S3 (Static)  |
+               +-----------------+
+                         |
+                         v
+               +-----------------+
+               |  API Gateway    |  (REST API)
+               |  (HTTP API)     |
+               +-----------------+
+                    |        |
+                    v        v
+          +----------+  +----------+
+          | Lambda   |  | Lambda   |
+          | (Upload) |  | (Search) |
+          +----------+  +----------+
+               |              |
+               v              v
+        +------------+  +-----------------------+
+        | S3 Bucket  |  | OpenSearch Serverless |
+        | (Images)   |  | (Vector Search)       |
+        +------------+  +-----------------------+
+               |              ^
+               | (S3 Event)   |
+               v              |
+        +------------+        |
+        | Lambda     |        |
+        | (Pipeline) |--------+
+        +------------+
+           |       |
+           v       v
+  +-----------+  +------------------+
+  |Rekognition|  | Bedrock          |
+  |(Labels)   |  | (Titan Multimodal|
+  +-----------+  |  Embeddings)     |
+                 +------------------+</div>
+
+      <h3>2.2 상세 데이터 흐름</h3>
+      <div class="code-block"><span class="code-label">DATA FLOW</span>
+<span class="cm">[이미지 업로드 흐름]</span>
+User -&gt; CloudFront -&gt; API Gateway -&gt; Lambda(Upload)
+  -&gt; S3 Presigned URL 생성
+  -&gt; User가 S3에 직접 업로드 (대용량 파일 효율)
+  -&gt; S3 Event Notification 발생
+  -&gt; Lambda(Pipeline) 트리거
+
+<span class="cm">[자동 처리 파이프라인]</span>
+Lambda(Pipeline):
+  1. S3에서 이미지 읽기
+  2. Rekognition.detectLabels() -&gt; 태그 목록 추출
+  3. Bedrock Titan Multimodal Embeddings -&gt; 1024차원 벡터 생성
+  4. OpenSearch Serverless에 문서 인덱싱:
+     {
+       imageKey: <span class="st">"s3://bucket/image.jpg"</span>,
+       labels: [<span class="st">"cat"</span>, <span class="st">"animal"</span>, <span class="st">"pet"</span>],
+       embedding: [<span class="nm">0.12</span>, <span class="nm">-0.34</span>, ...],  <span class="cm">// 1024-dim</span>
+       metadata: { uploadedBy, uploadedAt, fileSize }
+     }
+  5. (Optional) DynamoDB에 메타데이터 저장
+
+<span class="cm">[유사 이미지 검색 흐름]</span>
+User -&gt; 검색 이미지 업로드 또는 텍스트 입력
+  -&gt; API Gateway -&gt; Lambda(Search)
+  -&gt; Bedrock Titan Embeddings (쿼리 벡터 생성)
+  -&gt; OpenSearch kNN 검색 (코사인 유사도)
+  -&gt; 상위 K개 결과 반환 (이미지 URL + 유사도 점수 + 라벨)
+
+<span class="cm">[라벨 기반 필터 검색]</span>
+User -&gt; 태그 선택/입력
+  -&gt; API Gateway -&gt; Lambda(Search)
+  -&gt; OpenSearch term 쿼리 (라벨 필터링)
+  -&gt; 결과 반환</div>
+
+      <h3>2.3 서비스 연결 다이어그램</h3>
+      <div class="code-block"><span class="code-label">SERVICE CONNECTIONS</span>
+<span class="cm">[프론트엔드 계층]</span>
+  CloudFront ──OAC──&gt; S3 (Static Website)
+  CloudFront ──Origin──&gt; API Gateway
+
+<span class="cm">[API 계층]</span>
+  API Gateway ──Proxy──&gt; Lambda (Upload)   [<span class="kw">POST</span> /api/upload]
+  API Gateway ──Proxy──&gt; Lambda (Search)   [<span class="kw">POST</span> /api/search]
+  API Gateway ──Proxy──&gt; Lambda (Search)   [<span class="kw">GET</span>  /api/images]
+  API Gateway ──Proxy──&gt; Lambda (Search)   [<span class="kw">GET</span>  /api/labels]
+
+<span class="cm">[이벤트 처리 계층]</span>
+  S3 (Images) ──Event──&gt; Lambda (Pipeline)
+
+<span class="cm">[AI/ML 계층]</span>
+  Lambda (Pipeline) ──API──&gt; Rekognition (detectLabels)
+  Lambda (Pipeline) ──API──&gt; Bedrock (Titan Embeddings)
+  Lambda (Search)   ──API──&gt; Bedrock (Titan Embeddings)  <span class="cm">// 쿼리 이미지 벡터화</span>
+
+<span class="cm">[데이터 계층]</span>
+  Lambda (Pipeline) ──Index──&gt; OpenSearch Serverless
+  Lambda (Search)   ──Query──&gt; OpenSearch Serverless
+  Lambda (Upload)   ──PutObject──&gt; S3 (Images) [Presigned URL]</div>
+    </div>
+
+    <!-- 3. AWS 서비스 구성 -->
+    <div class="section">
+      <div class="section-title"><span class="num">3</span> AWS 서비스 구성</div>
+
+      <h3>3.1 서비스별 역할과 설정</h3>
+      <table>
+        <thead><tr><th>서비스</th><th>역할</th><th>설정 상세</th></tr></thead>
+        <tbody>
+          <tr><td><strong>S3 (Images)</strong></td><td>원본 이미지 저장소</td><td>버킷 정책, CORS 설정, Event Notification, Lifecycle 정책</td></tr>
+          <tr><td><strong>S3 (Static)</strong></td><td>프론트엔드 정적 호스팅</td><td>CloudFront Origin, 빌드 산출물 저장</td></tr>
+          <tr><td><strong>CloudFront</strong></td><td>CDN + HTTPS 종단점</td><td>S3 Origin(웹), API Gateway Origin(API), OAC 설정</td></tr>
+          <tr><td><strong>API Gateway</strong></td><td>REST API 엔드포인트</td><td>HTTP API(비용 절감), Lambda 프록시 통합, CORS</td></tr>
+          <tr><td><strong>Lambda (Upload)</strong></td><td>Presigned URL 생성</td><td>Node.js 20.x, 128MB, 10초 타임아웃</td></tr>
+          <tr><td><strong>Lambda (Pipeline)</strong></td><td>이미지 분석 파이프라인</td><td>Python 3.12, 512MB~1GB, 60초 타임아웃, S3 트리거</td></tr>
+          <tr><td><strong>Lambda (Search)</strong></td><td>검색 쿼리 처리</td><td>Python 3.12, 256MB, 15초 타임아웃</td></tr>
+          <tr><td><strong>Rekognition</strong></td><td>이미지 라벨링</td><td>detectLabels API, MaxLabels=20, MinConfidence=70</td></tr>
+          <tr><td><strong>Bedrock</strong></td><td>이미지 임베딩 생성</td><td>Titan Multimodal Embeddings G1, 1024-dim 벡터</td></tr>
+          <tr><td><strong>OpenSearch Serverless</strong></td><td>벡터 검색 엔진</td><td>Vector Search Collection, kNN 인덱스, AOSS</td></tr>
+          <tr><td><strong>IAM</strong></td><td>권한 관리</td><td>Lambda 실행 역할, S3/Rekognition/Bedrock/AOSS 접근 정책</td></tr>
+          <tr><td><strong>CloudWatch</strong></td><td>모니터링/로깅</td><td>Lambda 로그, 커스텀 메트릭, 알람</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.2 IAM 정책 설계</h3>
+      <div class="code-block"><span class="code-label">IAM POLICIES</span>
+<span class="kw">Lambda-Upload-Role:</span>
+  - s3:PutObject (images bucket)
+  - s3:GetObject (images bucket)
+
+<span class="kw">Lambda-Pipeline-Role:</span>
+  - s3:GetObject (images bucket)
+  - rekognition:DetectLabels
+  - bedrock:InvokeModel (titan-embed-image-v1)
+  - aoss:APIAccessAll (OpenSearch collection)
+  - logs:CreateLogGroup, logs:PutLogEvents
+
+<span class="kw">Lambda-Search-Role:</span>
+  - bedrock:InvokeModel (titan-embed-image-v1)
+  - aoss:APIAccessAll (OpenSearch collection)
+  - s3:GetObject (images bucket, Presigned URL 생성용)
+  - logs:CreateLogGroup, logs:PutLogEvents</div>
+    </div>
+
+    <!-- 4. 데이터 파이프라인 상세 -->
+    <div class="section">
+      <div class="section-title"><span class="num">4</span> 데이터 파이프라인 상세</div>
+
+      <h3>4.1 이미지 업로드 파이프라인</h3>
+      <div class="code-block"><span class="code-label">UPLOAD PIPELINE</span>
+<span class="kw">Step 1:</span> Presigned URL 요청
+  Client -&gt; <span class="kw">POST</span> /api/upload { fileName, contentType }
+  Lambda -&gt; S3.createPresignedPost()
+  Lambda -&gt; Return { uploadUrl, fields, imageKey }
+
+<span class="kw">Step 2:</span> 이미지 직접 업로드
+  Client -&gt; <span class="kw">PUT</span> uploadUrl (이미지 바이너리)
+  S3 -&gt; 이미지 저장 완료
+
+<span class="kw">Step 3:</span> S3 Event 트리거
+  S3 -&gt; Event Notification (s3:ObjectCreated:*)
+  -&gt; Lambda(Pipeline) 비동기 호출
+
+<span class="kw">Step 4:</span> AI 분석 파이프라인
+  Lambda(Pipeline):
+    4-1. S3에서 이미지 바이트 다운로드
+    4-2. Rekognition.detect_labels(Image={S3Object})
+         -&gt; labels: [{Name: <span class="st">"Cat"</span>, Confidence: <span class="nm">99.2</span>}, ...]
+    4-3. Bedrock.invoke_model(
+           modelId=<span class="st">"amazon.titan-embed-image-v1"</span>,
+           body={inputImage: base64_encoded_image}
+         )
+         -&gt; embedding: [float x 1024]
+    4-4. OpenSearch에 문서 인덱싱:
+         <span class="kw">POST</span> /{index}/_doc
+         {
+           <span class="ky">"imageKey"</span>: <span class="st">"uploads/2026/03/uuid.jpg"</span>,
+           <span class="ky">"imageUrl"</span>: <span class="st">"https://cdn.example.com/uploads/..."</span>,
+           <span class="ky">"labels"</span>: [<span class="st">"Cat"</span>, <span class="st">"Animal"</span>, <span class="st">"Pet"</span>, <span class="st">"Mammal"</span>],
+           <span class="ky">"labelConfidences"</span>: {<span class="st">"Cat"</span>: <span class="nm">99.2</span>, <span class="st">"Animal"</span>: <span class="nm">98.5</span>, ...},
+           <span class="ky">"embedding"</span>: [<span class="nm">0.12</span>, <span class="nm">-0.34</span>, <span class="nm">0.56</span>, ...],
+           <span class="ky">"fileSize"</span>: <span class="nm">1024000</span>,
+           <span class="ky">"contentType"</span>: <span class="st">"image/jpeg"</span>,
+           <span class="ky">"uploadedAt"</span>: <span class="st">"2026-03-13T10:00:00Z"</span>,
+           <span class="ky">"uploadedBy"</span>: <span class="st">"user-123"</span>
+         }</div>
+
+      <h3>4.2 벡터 검색 파이프라인</h3>
+      <div class="code-block"><span class="code-label">VECTOR SEARCH</span>
+<span class="cm">[이미지로 검색 (Image-to-Image)]</span>
+<span class="kw">Step 1:</span> 검색 이미지 업로드
+  Client -&gt; <span class="kw">POST</span> /api/search/image { image: base64 }
+
+<span class="kw">Step 2:</span> 쿼리 벡터 생성
+  Lambda -&gt; Bedrock Titan Embeddings (검색 이미지)
+  -&gt; query_vector: [float x 1024]
+
+<span class="kw">Step 3:</span> kNN 검색
+  Lambda -&gt; OpenSearch kNN query:
+  {
+    <span class="ky">"size"</span>: <span class="nm">20</span>,
+    <span class="ky">"query"</span>: {
+      <span class="ky">"knn"</span>: {
+        <span class="ky">"embedding"</span>: {
+          <span class="ky">"vector"</span>: query_vector,
+          <span class="ky">"k"</span>: <span class="nm">20</span>
+        }
+      }
+    }
+  }
+
+<span class="kw">Step 4:</span> 결과 반환
+  -&gt; [{imageUrl, labels, score, metadata}, ...]
+
+<span class="cm">[텍스트로 검색 (Text-to-Image)]</span>
+<span class="kw">Step 1:</span> 검색어 입력
+  Client -&gt; <span class="kw">POST</span> /api/search/text { query: <span class="st">"고양이"</span> }
+
+<span class="kw">Step 2:</span> 텍스트 벡터 생성
+  Lambda -&gt; Bedrock Titan Embeddings (inputText: <span class="st">"고양이"</span>)
+  -&gt; query_vector: [float x 1024]
+
+<span class="kw">Step 3-4:</span> 위와 동일 (kNN 검색 + 결과 반환)
+
+<span class="cm">[하이브리드 검색]</span>
+  벡터 검색 + 라벨 필터링 결합:
+  {
+    <span class="ky">"query"</span>: {
+      <span class="ky">"bool"</span>: {
+        <span class="ky">"must"</span>: [
+          {<span class="ky">"knn"</span>: {<span class="ky">"embedding"</span>: {<span class="ky">"vector"</span>: v, <span class="ky">"k"</span>: <span class="nm">20</span>}}},
+          {<span class="ky">"terms"</span>: {<span class="ky">"labels"</span>: [<span class="st">"Cat"</span>, <span class="st">"Animal"</span>]}}
+        ]
+      }
+    }
+  }</div>
+
+      <h3>4.3 OpenSearch 인덱스 매핑</h3>
+      <div class="code-block"><span class="code-label">JSON &mdash; OpenSearch Index Mapping</span>
+{
+  <span class="ky">"settings"</span>: {
+    <span class="ky">"index"</span>: {
+      <span class="ky">"knn"</span>: <span class="kw">true</span>,
+      <span class="ky">"knn.algo_param.ef_search"</span>: <span class="nm">512</span>
+    }
+  },
+  <span class="ky">"mappings"</span>: {
+    <span class="ky">"properties"</span>: {
+      <span class="ky">"embedding"</span>: {
+        <span class="ky">"type"</span>: <span class="st">"knn_vector"</span>,
+        <span class="ky">"dimension"</span>: <span class="nm">1024</span>,
+        <span class="ky">"method"</span>: {
+          <span class="ky">"name"</span>: <span class="st">"hnsw"</span>,
+          <span class="ky">"space_type"</span>: <span class="st">"cosinesimil"</span>,
+          <span class="ky">"engine"</span>: <span class="st">"nmslib"</span>,
+          <span class="ky">"parameters"</span>: {
+            <span class="ky">"ef_construction"</span>: <span class="nm">512</span>,
+            <span class="ky">"m"</span>: <span class="nm">16</span>
+          }
+        }
+      },
+      <span class="ky">"imageKey"</span>: { <span class="ky">"type"</span>: <span class="st">"keyword"</span> },
+      <span class="ky">"imageUrl"</span>: { <span class="ky">"type"</span>: <span class="st">"keyword"</span> },
+      <span class="ky">"labels"</span>: { <span class="ky">"type"</span>: <span class="st">"keyword"</span> },
+      <span class="ky">"labelConfidences"</span>: { <span class="ky">"type"</span>: <span class="st">"object"</span> },
+      <span class="ky">"uploadedAt"</span>: { <span class="ky">"type"</span>: <span class="st">"date"</span> },
+      <span class="ky">"uploadedBy"</span>: { <span class="ky">"type"</span>: <span class="st">"keyword"</span> },
+      <span class="ky">"fileSize"</span>: { <span class="ky">"type"</span>: <span class="st">"long"</span> },
+      <span class="ky">"contentType"</span>: { <span class="ky">"type"</span>: <span class="st">"keyword"</span> }
+    }
+  }
+}</div>
+    </div>
+
+    <!-- 5. 구현 난이도 분석 -->
+    <div class="section">
+      <div class="section-title"><span class="num">5</span> 구현 난이도 분석</div>
+
+      <h3>5.1 컴포넌트별 난이도</h3>
+      <table>
+        <thead><tr><th>컴포넌트</th><th class="center">난이도</th><th>설명</th><th class="center">예상 소요</th></tr></thead>
+        <tbody>
+          <tr><td>S3 버킷 설정 + CORS</td><td class="center"><span class="stars">&#9733;&#9734;&#9734;&#9734;&#9734;</span></td><td>AWS 콘솔에서 기본 설정</td><td class="center">0.5일</td></tr>
+          <tr><td>CloudFront + S3 정적 호스팅</td><td class="center"><span class="stars">&#9733;&#9733;&#9734;&#9734;&#9734;</span></td><td>OAC 설정, 캐시 정책</td><td class="center">1일</td></tr>
+          <tr><td>API Gateway (HTTP API)</td><td class="center"><span class="stars">&#9733;&#9733;&#9734;&#9734;&#9734;</span></td><td>Lambda 프록시 통합, CORS</td><td class="center">0.5일</td></tr>
+          <tr><td>Lambda (Upload)</td><td class="center"><span class="stars">&#9733;&#9733;&#9734;&#9734;&#9734;</span></td><td>S3 SDK 사용, 비교적 단순</td><td class="center">1일</td></tr>
+          <tr><td>Lambda (Pipeline - Rekognition)</td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9734;&#9734;</span></td><td>Rekognition API 호출, 에러 핸들링</td><td class="center">1.5일</td></tr>
+          <tr><td>Lambda (Pipeline - Bedrock)</td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9734;&#9734;</span></td><td>모델 접근 권한 설정 + API 호출</td><td class="center">1.5일</td></tr>
+          <tr class="loser"><td><strong>OpenSearch Serverless 설정</strong></td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9734;</span></td><td><strong>컬렉션, 접근/데이터/네트워크 정책 설정 복잡</strong></td><td class="center"><strong>3일</strong></td></tr>
+          <tr class="loser"><td><strong>OpenSearch kNN 인덱스 + 검색</strong></td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9734;</span></td><td><strong>인덱스 매핑, kNN 쿼리 최적화, 하이브리드 검색</strong></td><td class="center"><strong>3일</strong></td></tr>
+          <tr><td>Lambda (Search)</td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9734;&#9734;</span></td><td>벡터 생성 + OpenSearch 쿼리 조합</td><td class="center">2일</td></tr>
+          <tr><td>프론트엔드 (이미지 업로드 UI)</td><td class="center"><span class="stars">&#9733;&#9733;&#9734;&#9734;&#9734;</span></td><td>파일 선택, 드래그앤드롭, 프리뷰</td><td class="center">2일</td></tr>
+          <tr><td>프론트엔드 (검색 결과 갤러리)</td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9734;&#9734;</span></td><td>그리드 레이아웃, 유사도 표시, 필터링</td><td class="center">2일</td></tr>
+          <tr><td>프론트엔드 (라벨 필터/탐색)</td><td class="center"><span class="stars">&#9733;&#9733;&#9734;&#9734;&#9734;</span></td><td>태그 클라우드, 필터 조합</td><td class="center">1일</td></tr>
+          <tr><td>IAM 역할/정책 통합</td><td class="center"><span class="stars">&#9733;&#9733;&#9733;&#9734;&#9734;</span></td><td>서비스간 최소 권한 원칙 적용</td><td class="center">1일</td></tr>
+          <tr><td>에러 핸들링 + 모니터링</td><td class="center"><span class="stars">&#9733;&#9733;&#9734;&#9734;&#9734;</span></td><td>CloudWatch 로그, 재시도 로직</td><td class="center">1일</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.2 핵심 난관 (Critical Path)</h3>
+      <div class="callout danger">
+        <div class="callout-title">&#9888; 1. OpenSearch Serverless 설정 (최고 난이도)</div>
+        <ul style="font-size:14px; margin-left:20px;">
+          <li>Collection 생성 시 3가지 정책(접근, 데이터, 네트워크) 모두 설정 필요</li>
+          <li>Vector Search Collection은 일반 Search Collection과 별도 OCU 할당</li>
+          <li>IAM 기반 인증으로 Lambda에서 요청 시 AWS Signature V4 서명 필요</li>
+          <li><strong>대응:</strong> AWS 문서 + 멘토 지원 적극 활용, 초기에 집중 투자</li>
+        </ul>
+      </div>
+      <div class="callout warning">
+        <div class="callout-title">&#9888; 2. Bedrock 모델 접근 권한</div>
+        <ul style="font-size:14px; margin-left:20px;">
+          <li>Bedrock 모델 사용을 위해 Model Access 요청 필요 (승인까지 시간 소요 가능)</li>
+          <li>리전별 가용 모델 상이</li>
+          <li><strong>대응:</strong> 프로젝트 시작 즉시 Model Access 요청</li>
+        </ul>
+      </div>
+      <div class="callout info">
+        <div class="callout-title">&#9432; 3. Presigned URL 기반 업로드 흐름</div>
+        <ul style="font-size:14px; margin-left:20px;">
+          <li>CORS, Content-Type, 만료 시간 등 세부 설정</li>
+          <li><strong>대응:</strong> 공식 문서 예제 기반 구현</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 6. 15주 타임라인 -->
+    <div class="section">
+      <div class="section-title"><span class="num">6</span> 15주 타임라인</div>
+
+      <h3>6.1 전체 로드맵</h3>
+      <div class="code-block"><span class="code-label">ROADMAP</span>
+Week  1-2  [기획/설계]     ████░░░░░░░░░░░░░░░░░░░░░░░░░░  13%
+Week  3-4  [인프라 구축]   ░░░░████░░░░░░░░░░░░░░░░░░░░░░  27%
+Week  5-6  [백엔드 핵심]   ░░░░░░░░████░░░░░░░░░░░░░░░░░░  40%
+Week  7    [MVP 통합]      ░░░░░░░░░░░░██░░░░░░░░░░░░░░░░  47%
+Week  8    [중간 발표]     ░░░░░░░░░░░░░░██░░░░░░░░░░░░░░  53%  &lt;-- 중간고사
+Week  9-10 [프론트엔드]    ░░░░░░░░░░░░░░░░████░░░░░░░░░░  67%
+Week 11-12 [고도화]        ░░░░░░░░░░░░░░░░░░░░████░░░░░░  80%
+Week 13-14 [테스트/최적화] ░░░░░░░░░░░░░░░░░░░░░░░░████░░  93%
+Week 15    [최종 발표]     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░██ 100%</div>
+
+      <h3>6.2 주차별 상세 계획</h3>
+      <table>
+        <thead><tr><th class="center">주차</th><th>기간</th><th>목표</th><th>산출물</th><th>마일스톤</th></tr></thead>
+        <tbody>
+          <tr><td class="center">1</td><td>03/06-03/12</td><td>프로젝트 기획, 요구사항 정의, AWS 계정 설정</td><td>기획서, AWS 계정, Bedrock Model Access 요청</td><td>팀 빌딩 완료</td></tr>
+          <tr><td class="center">2</td><td>03/13-03/19</td><td>아키텍처 설계 확정, S3 버킷 생성, IAM 기본 설정</td><td>아키텍처 문서, S3 버킷</td><td>설계 확정</td></tr>
+          <tr><td class="center">3</td><td>03/20-03/26</td><td>Lambda 스캐폴딩, API Gateway 설정, S3 이벤트 트리거</td><td>Lambda 3개, API Gateway 배포</td><td>인프라 기반 완성</td></tr>
+          <tr><td class="center">4</td><td>03/27-04/02</td><td>OpenSearch Serverless 컬렉션, 벡터 인덱스 설정</td><td>AOSS 컬렉션, kNN 인덱스 매핑</td><td>데이터 계층 완성</td></tr>
+          <tr><td class="center">5</td><td>04/03-04/09</td><td>Rekognition 연동, Bedrock 연동</td><td>Lambda Pipeline 함수 완성</td><td>AI 파이프라인 완성</td></tr>
+          <tr><td class="center">6</td><td>04/10-04/16</td><td>검색 Lambda 구현, kNN 검색 + 라벨 검색</td><td>Lambda Search 함수 완성</td><td>검색 기능 완성</td></tr>
+          <tr class="winner"><td class="center"><strong>7</strong></td><td><strong>04/17-04/23</strong></td><td><strong>MVP 통합 테스트, E2E 검증</strong></td><td><strong>동작하는 MVP</strong></td><td><strong>MVP 완성</strong></td></tr>
+          <tr class="winner"><td class="center"><strong>8</strong></td><td><strong>04/24-04/30</strong></td><td><strong>중간고사/중간 발표, MVP 데모</strong></td><td><strong>발표 자료, 데모 영상</strong></td><td><strong>중간 발표</strong></td></tr>
+          <tr><td class="center">9</td><td>05/01-05/07</td><td>프론트엔드 개발 (업로드 UI, 검색 UI)</td><td>React 앱 기본 UI</td><td>프론트엔드 시작</td></tr>
+          <tr><td class="center">10</td><td>05/08-05/14</td><td>프론트엔드 완성 (갤러리, 라벨 필터)</td><td>완성된 웹 UI</td><td>프론트엔드 완성</td></tr>
+          <tr><td class="center">11</td><td>05/15-05/21</td><td>CloudFront 배포, Cognito, 에러 핸들링</td><td>프로덕션 배포</td><td>배포 완료</td></tr>
+          <tr><td class="center">12</td><td>05/22-05/28</td><td>고도화: 하이브리드 검색, 시각화, 최적화</td><td>고도화 기능</td><td>차별화 기능</td></tr>
+          <tr><td class="center">13</td><td>05/29-06/04</td><td>부하 테스트, 보안 점검, 비용 최적화</td><td>테스트 리포트</td><td>QA 완료</td></tr>
+          <tr><td class="center">14</td><td>06/05-06/11</td><td>최종 문서화, 발표 준비</td><td>최종 보고서, 발표자료</td><td>문서화 완료</td></tr>
+          <tr class="winner"><td class="center"><strong>15</strong></td><td><strong>06/12</strong></td><td><strong>최종 발표</strong></td><td><strong>최종 데모</strong></td><td><strong>프로젝트 완료</strong></td></tr>
+        </tbody>
+      </table>
+
+      <h3>6.3 주차별 팀 분담 (2인 기준)</h3>
+      <table>
+        <thead><tr><th class="center">주차</th><th>팀원 A (백엔드/인프라)</th><th>팀원 B (프론트엔드/통합)</th></tr></thead>
+        <tbody>
+          <tr><td class="center">1-2주</td><td>AWS 인프라 설계 + 계정 설정</td><td>요구사항 정리 + UI 와이어프레임</td></tr>
+          <tr><td class="center">3-4주</td><td>Lambda + API Gateway + AOSS</td><td>S3 설정 + Presigned URL 테스트</td></tr>
+          <tr><td class="center">5-6주</td><td>Rekognition + Bedrock 연동</td><td>검색 Lambda + OpenSearch 쿼리</td></tr>
+          <tr><td class="center">7-8주</td><td>MVP 통합 + 디버깅</td><td>발표 자료 + 간단 데모 UI</td></tr>
+          <tr><td class="center">9-10주</td><td>API 개선 + 에러 핸들링</td><td>프론트엔드 개발</td></tr>
+          <tr><td class="center">11-12주</td><td>CloudFront + Cognito + 보안</td><td>UI 고도화 + 시각화</td></tr>
+          <tr><td class="center">13-15주</td><td>성능 테스트 + 최적화</td><td>문서화 + 발표 준비</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 7. 예상 비용 -->
+    <div class="section">
+      <div class="section-title"><span class="num">7</span> 예상 비용</div>
+
+      <div class="callout danger">
+        <div class="callout-title">&#9888; 핵심: OpenSearch Serverless가 최대 비용 요인 (최소 2 OCU = ~$346/월)</div>
+      </div>
+
+      <h3>7.1 AWS 프리티어 + 학생 크레딧 기준</h3>
+      <p style="color:var(--gray-600); font-size:14px; margin-bottom:12px;"><strong>가정</strong>: AWS Educate / Academy 크레딧 $100~$200 사용 가능, 프리티어 12개월 내 계정</p>
+
+      <table>
+        <thead><tr><th>서비스</th><th>프리티어 범위</th><th class="right">초과 시 단가</th><th class="right">월 예상 비용</th></tr></thead>
+        <tbody>
+          <tr><td><strong>S3</strong></td><td>5GB 저장, 2만 GET, 2천 PUT</td><td class="right">$0.023/GB</td><td class="right">$0 (프리티어)</td></tr>
+          <tr><td><strong>Lambda</strong></td><td>100만 요청, 40만 GB-초/월</td><td class="right">$0.20/100만 요청</td><td class="right">$0 (프리티어)</td></tr>
+          <tr><td><strong>API Gateway</strong></td><td>HTTP API 100만 호출/월</td><td class="right">$1.00/100만</td><td class="right">$0 (프리티어)</td></tr>
+          <tr><td><strong>CloudFront</strong></td><td>1TB 전송/월</td><td class="right">$0.085/GB</td><td class="right">$0 (프리티어)</td></tr>
+          <tr><td><strong>Rekognition</strong></td><td>5,000 이미지/월</td><td class="right">$0.001/이미지</td><td class="right">$0 (프리티어)</td></tr>
+          <tr><td><strong>Bedrock (Titan)</strong></td><td>프리티어 없음</td><td class="right">$0.00006/이미지</td><td class="right">$0.06</td></tr>
+          <tr class="loser"><td><strong>OpenSearch Serverless</strong></td><td><strong>프리티어 없음</strong></td><td class="right"><strong>$0.24/OCU/시간</strong></td><td class="right"><strong>$173~$346/월</strong></td></tr>
+          <tr><td><strong>CloudWatch</strong></td><td>5GB 로그, 10 메트릭</td><td class="right">소량</td><td class="right">$0 (프리티어)</td></tr>
+          <tr><td><strong>Cognito</strong></td><td>50,000 MAU</td><td class="right">-</td><td class="right">$0 (프리티어)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>7.2 비용 최적화 전략 비교</h3>
+      <div class="compare-grid">
+        <div class="compare-card option-a">
+          <h4>Option A: AOSS 풀타임</h4>
+          <div class="price" style="color:var(--danger);">~$1,400 <small>/ 15주</small></div>
+          <ul>
+            <li>&#10060; OpenSearch Serverless 상시 가동</li>
+            <li>&#10060; 최소 2 OCU = $346/월</li>
+            <li>&#9745; Half OCU 시 $173/월, 총 ~$700</li>
+            <li>&#9745; 학습 목적에 적합</li>
+            <li>&#10060; 크레딧 충분 시에만 가능</li>
+          </ul>
+        </div>
+        <div class="compare-card option-b">
+          <h4>Option B: EC2 + pgvector</h4>
+          <div class="price" style="color:var(--info);">~$10 <small>/ 15주</small></div>
+          <ul>
+            <li>&#9989; t3.micro + PostgreSQL + pgvector</li>
+            <li>&#9989; 프리티어 내 (750시간/월)</li>
+            <li>&#10060; 서버리스가 아님</li>
+            <li>&#10060; 서버 관리 부담 증가</li>
+            <li>&#9989; 비용 최소화</li>
+          </ul>
+        </div>
+        <div class="compare-card option-c">
+          <span class="card-badge">&#10003; 권장</span>
+          <h4>Option C: 혼합 접근</h4>
+          <div class="price" style="color:var(--success);">~$270 <small>/ 15주</small></div>
+          <ul>
+            <li>&#9989; 1~12주: pgvector on EC2 (프리티어)</li>
+            <li>&#9989; 13~15주: AOSS 활성화 (3주만)</li>
+            <li>&#9989; 총 비용 ~$260 + Bedrock 소량</li>
+            <li>&#9989; 가장 현실적</li>
+            <li>&#9989; 최종 데모에서 AOSS 시연</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>7.3 비용 요약</h3>
+      <table>
+        <thead><tr><th>시나리오</th><th class="right">월간 비용</th><th class="right">15주 총 비용</th><th class="center">적합도</th></tr></thead>
+        <tbody>
+          <tr class="loser"><td>Option A (AOSS 풀타임)</td><td class="right">~$346</td><td class="right">~$1,400</td><td class="center">크레딧 충분 시</td></tr>
+          <tr><td>Option A (Half OCU)</td><td class="right">~$173</td><td class="right">~$700</td><td class="center">크레딧 $200+ 시</td></tr>
+          <tr><td>Option B (EC2+pgvector)</td><td class="right">~$0</td><td class="right">~$10</td><td class="center">비용 최소화</td></tr>
+          <tr class="winner"><td><strong>Option C (혼합)</strong></td><td class="right"><strong>가변</strong></td><td class="right"><strong>~$270</strong></td><td class="center"><strong>가장 현실적</strong></td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <div class="callout-title">&#128203; 멘토에게 확인할 사항</div>
+        AWS 크레딧 규모, OpenSearch Serverless 사용 가능 여부, 비용 지원 한도
+      </div>
+    </div>
+
+    <!-- 8. 위험 요소 -->
+    <div class="section">
+      <div class="section-title"><span class="num">8</span> 위험 요소와 대응 방안</div>
+
+      <h3>8.1 기술적 리스크</h3>
+      <table>
+        <thead><tr><th>리스크</th><th class="center">영향</th><th class="center">가능성</th><th>대응 방안</th></tr></thead>
+        <tbody>
+          <tr><td><strong>OpenSearch Serverless 설정 복잡도</strong></td><td class="center"><span class="dot red"></span> High</td><td class="center"><span class="dot red"></span> High</td><td>3~4주차에 집중 투자, 공식 Workshop 활용, 멘토 지원</td></tr>
+          <tr><td><strong>Bedrock Model Access 승인 지연</strong></td><td class="center"><span class="dot red"></span> High</td><td class="center"><span class="dot yellow"></span> Mid</td><td>1주차에 즉시 요청, Rekognition 라벨 기반 검색 먼저 구현</td></tr>
+          <tr><td><strong>OpenSearch Serverless 비용 초과</strong></td><td class="center"><span class="dot red"></span> High</td><td class="center"><span class="dot red"></span> High</td><td>Option C(혼합) 전략 사용, 미사용 시 컬렉션 삭제</td></tr>
+          <tr><td>Lambda Cold Start 지연</td><td class="center"><span class="dot yellow"></span> Mid</td><td class="center"><span class="dot yellow"></span> Mid</td><td>Provisioned Concurrency 또는 Warm-up 전략</td></tr>
+          <tr><td>대용량 이미지 처리 타임아웃</td><td class="center"><span class="dot yellow"></span> Mid</td><td class="center"><span class="dot yellow"></span> Mid</td><td>이미지 리사이즈 전처리, Lambda 60초, 크기 제한(10MB)</td></tr>
+          <tr><td>리전별 서비스 가용성</td><td class="center"><span class="dot yellow"></span> Mid</td><td class="center"><span class="dot green"></span> Low</td><td>us-east-1(버지니아) 사용 권장</td></tr>
+          <tr><td>CORS/Presigned URL 이슈</td><td class="center"><span class="dot green"></span> Low</td><td class="center"><span class="dot red"></span> High</td><td>초기에 업로드 파이프라인 검증, 디버깅 시간 확보</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.2 프로젝트 리스크</h3>
+      <table>
+        <thead><tr><th>리스크</th><th class="center">영향</th><th class="center">가능성</th><th>대응 방안</th></tr></thead>
+        <tbody>
+          <tr><td>팀원 이탈/불참</td><td class="center"><span class="dot red"></span> High</td><td class="center"><span class="dot green"></span> Low</td><td>모든 코드 GitHub 관리, 문서화 철저</td></tr>
+          <tr><td>일정 지연</td><td class="center"><span class="dot yellow"></span> Mid</td><td class="center"><span class="dot yellow"></span> Mid</td><td>MVP 우선, 고도화는 버퍼 활용</td></tr>
+          <tr><td>AWS 크레딧 소진</td><td class="center"><span class="dot red"></span> High</td><td class="center"><span class="dot yellow"></span> Mid</td><td>비용 모니터링 알람 설정, Option C 전략</td></tr>
+          <tr><td>학기 중 다른 과목 부담</td><td class="center"><span class="dot yellow"></span> Mid</td><td class="center"><span class="dot red"></span> High</td><td>주차별 마일스톤 명확화, 최소 주 2회 작업</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.3 대응 우선순위</h3>
+      <div class="code-block"><span class="code-label">PRIORITY</span>
+<span class="cm">[Critical - 즉시 대응]</span>
+1. Bedrock Model Access 요청 (1주차)
+2. OpenSearch Serverless 비용 전략 확정 (2주차)
+3. AWS 크레딧 규모 확인 (1주차)
+
+<span class="cm">[Important - 2주 내 대응]</span>
+4. 리전 결정 (us-east-1 권장)
+5. IAM 정책 설계
+6. S3 CORS + Presigned URL 테스트
+
+<span class="cm">[Nice to have - 진행하며 대응]</span>
+7. CloudWatch 알람 설정
+8. Lambda 성능 최적화</div>
+    </div>
+
+    <!-- 9. 팀 역할 분담 -->
+    <div class="section">
+      <div class="section-title"><span class="num">9</span> 팀 역할 분담</div>
+
+      <h3>9.1 2인 구성 (최소)</h3>
+      <table>
+        <thead><tr><th>역할</th><th>담당 영역</th><th>필요 스킬</th></tr></thead>
+        <tbody>
+          <tr><td><strong>팀원 A</strong><br>백엔드/인프라</td><td>Lambda 함수 개발(Python), IAM 정책, OpenSearch 설정, Rekognition/Bedrock 연동, CloudWatch</td><td>Python, boto3, REST API, 인프라 설정</td></tr>
+          <tr><td><strong>팀원 B</strong><br>프론트엔드/통합</td><td>React 웹 앱 개발, S3 업로드 구현, API 연동, CloudFront 배포, UI/UX, 발표 자료</td><td>JavaScript/React, HTML/CSS, S3 Presigned URL</td></tr>
+          <tr><td><strong>공통</strong></td><td colspan="2">아키텍처 설계, 코드 리뷰, 테스트, 문서화</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 3인 구성 (권장)</h3>
+      <table>
+        <thead><tr><th>역할</th><th>담당 영역</th></tr></thead>
+        <tbody>
+          <tr><td><strong>팀원 A: 인프라/AI 엔지니어</strong></td><td>AWS 인프라 설정(S3, Lambda, API GW, IAM), Rekognition/Bedrock 연동, OpenSearch Serverless 구축</td></tr>
+          <tr><td><strong>팀원 B: 백엔드 개발자</strong></td><td>Lambda 함수 구현(Pipeline, Search, Upload), 데이터 파이프라인, 에러 핸들링, 테스트</td></tr>
+          <tr><td><strong>팀원 C: 프론트엔드 개발자</strong></td><td>React 앱 개발, UI/UX, CloudFront 배포, 발표 자료, 문서화</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.3 협업 도구</h3>
+      <table>
+        <thead><tr><th>도구</th><th>용도</th></tr></thead>
+        <tbody>
+          <tr><td>GitHub</td><td>코드 관리, PR 리뷰, Issues</td></tr>
+          <tr><td>Discord/Slack</td><td>실시간 커뮤니케이션</td></tr>
+          <tr><td>Notion/Google Docs</td><td>문서 공유, 주간 회의록</td></tr>
+          <tr><td>AWS CloudWatch</td><td>공동 모니터링 대시보드</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 10. 차별화 포인트 -->
+    <div class="section">
+      <div class="section-title"><span class="num">10</span> 차별화 포인트</div>
+
+      <h3>10.1 기술적 특장점</h3>
+      <table>
+        <thead><tr><th>차별화 요소</th><th>설명</th><th>어필 포인트</th></tr></thead>
+        <tbody>
+          <tr><td><strong>멀티모달 벡터 검색</strong></td><td>텍스트 &rarr; 이미지, 이미지 &rarr; 이미지 교차 검색</td><td>의미론적(semantic) 유사도 검색</td></tr>
+          <tr><td><strong>완전 서버리스 아키텍처</strong></td><td>EC2 없이 Lambda + 관리형 서비스만으로 구성</td><td>운영 비용 최소화, 자동 스케일링, Zero Admin</td></tr>
+          <tr><td><strong>이벤트 드리븐 파이프라인</strong></td><td>S3 업로드 &rarr; 자동 분석 &rarr; 자동 인덱싱</td><td>실시간 처리, 느슨한 결합, 확장 용이</td></tr>
+          <tr><td><strong>하이브리드 검색</strong></td><td>벡터 유사도 + 라벨 필터링 결합</td><td>검색 정확도 향상, 사용자 맞춤 필터링</td></tr>
+          <tr><td><strong>AWS AI 서비스 통합</strong></td><td>Rekognition + Bedrock 2개 AI 서비스 연계</td><td>ML 모델 학습 없이 프로덕션 수준 AI 구현</td></tr>
+        </tbody>
+      </table>
+
+      <h3>10.2 발표 시 강조할 포인트</h3>
+      <div class="callout success">
+        <div class="callout-title">&#127942; 핵심 어필 포인트</div>
+        <table style="margin:8px 0 0; background:transparent;">
+          <tbody>
+            <tr><td style="width:24px; border:none; padding:6px 8px; font-size:18px;">1.</td><td style="border:none; padding:6px 8px;"><strong>&ldquo;ML 모델 학습 없이 프로덕션급 AI&rdquo;</strong>: Rekognition과 Bedrock을 조합하여 자체 모델 훈련 없이도 고품질 이미지 분석/검색 구현</td></tr>
+            <tr><td style="border:none; padding:6px 8px; font-size:18px;">2.</td><td style="border:none; padding:6px 8px;"><strong>&ldquo;이미지의 의미를 이해하는 검색&rdquo;</strong>: 기존 텍스트 태그 매칭과 달리, 시각적 유사성을 벡터 공간에서 측정</td></tr>
+            <tr><td style="border:none; padding:6px 8px; font-size:18px;">3.</td><td style="border:none; padding:6px 8px;"><strong>&ldquo;확장 가능한 서버리스 설계&rdquo;</strong>: 0에서 수천 사용자까지 자동 확장</td></tr>
+            <tr><td style="border:none; padding:6px 8px; font-size:18px;">4.</td><td style="border:none; padding:6px 8px;"><strong>&ldquo;실시간 이벤트 드리븐 처리&rdquo;</strong>: 업로드 즉시 AI 분석이 시작되는 비동기 파이프라인</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>10.3 데모 시나리오</h3>
+      <div class="code-block"><span class="code-label">DEMO SCENARIOS</span>
+<span class="kw">데모 1: &ldquo;여행 사진 자동 분류&rdquo;</span>
+  1. 여행 사진 10장 업로드 (해변, 음식, 도시, 자연 등)
+  2. 자동 태깅 결과 확인 (실시간 라벨 표시)
+  3. <span class="st">&ldquo;해변&rdquo;</span> 라벨로 필터링 -&gt; 해변 사진만 표시
+  4. 특정 해변 사진으로 유사 이미지 검색 -&gt; 비슷한 풍경 사진
+
+<span class="kw">데모 2: &ldquo;텍스트로 이미지 찾기&rdquo;</span>
+  1. 사전에 100장 이미지 인덱싱
+  2. <span class="st">&ldquo;sunset over ocean&rdquo;</span> 텍스트 입력
+  3. 일몰/바다 관련 이미지가 유사도 순으로 표시
+  4. 한국어 <span class="st">&ldquo;강아지 산책&rdquo;</span> 입력 -&gt; 관련 이미지 검색
+
+<span class="kw">데모 3: &ldquo;비슷한 상품 찾기&rdquo;</span> (e-commerce 시나리오)
+  1. 상품 이미지 업로드
+  2. 유사 상품 이미지 자동 추천
+  3. 카테고리 라벨로 추가 필터링</div>
+    </div>
+
+    <!-- 11. MVP 정의 -->
+    <div class="section">
+      <div class="section-title"><span class="num">11</span> MVP 정의 (중간고사 8주차 기준)</div>
+
+      <h3>11.1 MVP 범위 (Must Have)</h3>
+      <table>
+        <thead><tr><th>기능</th><th>상세</th><th>완료 기준</th></tr></thead>
+        <tbody>
+          <tr><td><strong>이미지 업로드</strong></td><td>S3 Presigned URL 기반 이미지 업로드</td><td>API로 업로드 성공, S3에 저장 확인</td></tr>
+          <tr><td><strong>자동 라벨링</strong></td><td>S3 이벤트 &rarr; Lambda &rarr; Rekognition</td><td>업로드된 이미지에 자동 라벨 추출</td></tr>
+          <tr><td><strong>벡터 임베딩 생성</strong></td><td>Lambda &rarr; Bedrock Titan Embeddings</td><td>1024차원 벡터 생성 및 저장</td></tr>
+          <tr><td><strong>벡터 인덱싱</strong></td><td>OpenSearch Serverless에 문서 저장</td><td>이미지 메타데이터 + 벡터 인덱싱</td></tr>
+          <tr><td><strong>유사 이미지 검색</strong></td><td>kNN 검색 API</td><td>쿼리 이미지 기반 Top-K 반환</td></tr>
+          <tr><td><strong>간단한 웹 UI</strong></td><td>업로드 폼 + 검색 결과 리스트</td><td>최소한의 동작 가능한 UI</td></tr>
+        </tbody>
+      </table>
+
+      <h3>11.2 MVP 이후 고도화 (Nice to Have)</h3>
+      <table>
+        <thead><tr><th>기능</th><th class="center">우선순위</th><th class="center">예상 주차</th></tr></thead>
+        <tbody>
+          <tr><td>텍스트 &rarr; 이미지 검색</td><td class="center">P1</td><td class="center">9주차</td></tr>
+          <tr><td>하이브리드 검색 (벡터+라벨)</td><td class="center">P1</td><td class="center">10주차</td></tr>
+          <tr><td>프론트엔드 갤러리 UI</td><td class="center">P1</td><td class="center">9-10주차</td></tr>
+          <tr><td>라벨 태그 클라우드/필터</td><td class="center">P2</td><td class="center">10주차</td></tr>
+          <tr><td>사용자 인증 (Cognito)</td><td class="center">P2</td><td class="center">11주차</td></tr>
+          <tr><td>유사도 시각화 (점수 표시)</td><td class="center">P2</td><td class="center">12주차</td></tr>
+          <tr><td>이미지 클러스터링 시각화</td><td class="center">P3</td><td class="center">12주차</td></tr>
+          <tr><td>배치 업로드 (ZIP)</td><td class="center">P3</td><td class="center">12주차</td></tr>
+          <tr><td>CloudFront CDN 배포</td><td class="center">P2</td><td class="center">11주차</td></tr>
+          <tr><td>비용 대시보드</td><td class="center">P3</td><td class="center">13주차</td></tr>
+        </tbody>
+      </table>
+
+      <h3>11.3 MVP 아키텍처 (최소 구성)</h3>
+      <div class="code-block"><span class="code-label">MVP ARCHITECTURE &mdash; 8주차까지</span>
+
+  사용자 (로컬 React 앱)
+       |
+       v
+  API Gateway (HTTP API)
+    |          |
+    v          v
+  Lambda     Lambda
+  (Upload)   (Search)
+    |          |
+    v          |
+  S3 ──Event──&gt; Lambda(Pipeline) ──&gt; Rekognition
+  (Images)                       ──&gt; Bedrock (Titan)
+                                 ──&gt; OpenSearch Serverless (또는 pgvector)
+
+<span class="cm">* CloudFront, Cognito, 고도화 UI는 MVP 이후</span>
+<span class="cm">* React 앱은 로컬 개발 서버(localhost)에서 API Gateway 호출</span></div>
+
+      <h3>11.4 MVP 완료 체크리스트</h3>
+      <ul class="checklist">
+        <li>S3 버킷 생성 및 이벤트 알림 설정</li>
+        <li>Lambda 함수 3개 배포 (Upload, Pipeline, Search)</li>
+        <li>API Gateway HTTP API 배포</li>
+        <li>Rekognition detectLabels 연동</li>
+        <li>Bedrock Titan Embeddings 연동</li>
+        <li>OpenSearch Serverless (또는 pgvector) 벡터 인덱스 설정</li>
+        <li>E2E 테스트: 이미지 업로드 &rarr; 자동 분석 &rarr; 벡터 검색 성공</li>
+        <li>간단한 웹 UI에서 업로드 + 검색 동작 확인</li>
+        <li>중간 발표 자료 준비</li>
+      </ul>
+    </div>
+
+    <!-- 부록 A -->
+    <div class="section">
+      <div class="section-title"><span class="num">A</span> 부록 A: 기술 스택 요약</div>
+
+      <h3>백엔드</h3>
+      <table>
+        <thead><tr><th>항목</th><th>선택</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>런타임</td><td><strong>Python 3.12 (Lambda)</strong></td><td>boto3 네이티브 지원, AI/ML 생태계 풍부</td></tr>
+          <tr><td>Upload Lambda</td><td><strong>Node.js 20.x</strong></td><td>S3 Presigned URL 생성에 AWS SDK v3 활용</td></tr>
+          <tr><td>API 형식</td><td><strong>REST (API Gateway HTTP API)</strong></td><td>비용 효율적, 충분한 기능</td></tr>
+          <tr><td>벡터 DB</td><td><strong>OpenSearch Serverless (A) / pgvector (B)</strong></td><td>프로젝트 예산에 따라 결정</td></tr>
+        </tbody>
+      </table>
+
+      <h3>프론트엔드</h3>
+      <table>
+        <thead><tr><th>항목</th><th>선택</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>프레임워크</td><td><strong>React 18 + Vite</strong></td><td>빠른 개발, SPA 적합</td></tr>
+          <tr><td>스타일링</td><td><strong>Tailwind CSS</strong></td><td>빠른 UI 개발, 반응형</td></tr>
+          <tr><td>HTTP 클라이언트</td><td><strong>fetch API</strong></td><td>추가 의존성 불필요</td></tr>
+          <tr><td>상태 관리</td><td><strong>React useState/useContext</strong></td><td>앱 규모 대비 충분</td></tr>
+          <tr><td>이미지 업로드</td><td><strong>react-dropzone</strong></td><td>드래그앤드롭 UX</td></tr>
+        </tbody>
+      </table>
+
+      <h3>인프라</h3>
+      <table>
+        <thead><tr><th>항목</th><th>선택</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>IaC</td><td><strong>AWS SAM / CloudFormation</strong></td><td>Lambda 배포에 최적화</td></tr>
+          <tr><td>CI/CD</td><td><strong>GitHub Actions</strong></td><td>무료, GitHub 통합</td></tr>
+          <tr><td>모니터링</td><td><strong>CloudWatch</strong></td><td>AWS 네이티브, 추가 비용 없음</td></tr>
+          <tr><td>리전</td><td><strong>us-east-1</strong></td><td>모든 서비스 가용, Bedrock 모델 최다</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 부록 B -->
+    <div class="section">
+      <div class="section-title"><span class="num">B</span> 부록 B: 핵심 API 명세 (Draft)</div>
+
+      <div class="api-block">
+        <span class="method post">POST</span>
+        <span class="path">/api/upload</span>
+        <div class="code-block" style="margin-top:10px;">Request:  { <span class="ky">fileName</span>: string, <span class="ky">contentType</span>: string }
+Response: { <span class="ky">uploadUrl</span>: string, <span class="ky">fields</span>: object, <span class="ky">imageKey</span>: string }</div>
+      </div>
+
+      <div class="api-block">
+        <span class="method post">POST</span>
+        <span class="path">/api/search/image</span>
+        <div class="code-block" style="margin-top:10px;">Request:  { <span class="ky">image</span>: string (base64), <span class="ky">k</span>: number (default 10) }
+Response: { <span class="ky">results</span>: [{ imageUrl, labels, score, metadata }] }</div>
+      </div>
+
+      <div class="api-block">
+        <span class="method post">POST</span>
+        <span class="path">/api/search/text</span>
+        <div class="code-block" style="margin-top:10px;">Request:  { <span class="ky">query</span>: string, <span class="ky">k</span>: number (default 10) }
+Response: { <span class="ky">results</span>: [{ imageUrl, labels, score, metadata }] }</div>
+      </div>
+
+      <div class="api-block">
+        <span class="method get">GET</span>
+        <span class="path">/api/images?page=1&amp;limit=20</span>
+        <div class="code-block" style="margin-top:10px;">Response: { <span class="ky">images</span>: [{ imageUrl, labels, uploadedAt }], <span class="ky">total</span>: number }</div>
+      </div>
+
+      <div class="api-block">
+        <span class="method get">GET</span>
+        <span class="path">/api/labels</span>
+        <div class="code-block" style="margin-top:10px;">Response: { <span class="ky">labels</span>: [{ name: string, count: number }] }</div>
+      </div>
+
+      <div class="api-block">
+        <span class="method get">GET</span>
+        <span class="path">/api/images/:id</span>
+        <div class="code-block" style="margin-top:10px;">Response: { <span class="ky">imageUrl</span>, <span class="ky">labels</span>, <span class="ky">labelConfidences</span>, <span class="ky">metadata</span>, <span class="ky">similarImages</span> }</div>
+      </div>
+    </div>
+
+    <!-- 부록 C -->
+    <div class="section">
+      <div class="section-title"><span class="num">C</span> 부록 C: 참고 자료</div>
+
+      <h3>AWS 공식 문서</h3>
+      <ul class="ref-list">
+        <li><a href="https://docs.aws.amazon.com/rekognition/latest/dg/labels-detect-labels-image.html" target="_blank">AWS Rekognition DetectLabels</a></li>
+        <li><a href="https://docs.aws.amazon.com/bedrock/latest/userguide/titan-multiemb-models.html" target="_blank">Amazon Titan Multimodal Embeddings</a></li>
+        <li><a href="https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-vector-search.html" target="_blank">OpenSearch Serverless Vector Search</a></li>
+        <li><a href="https://docs.aws.amazon.com/lambda/latest/dg/with-s3.html" target="_blank">S3 Event Notifications to Lambda</a></li>
+        <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html" target="_blank">S3 Presigned URL</a></li>
+      </ul>
+    </div>
+
+    <!-- 버전 히스토리 -->
+    <div class="section">
+      <div class="section-title" style="border-bottom-color: var(--gray-300);">버전 히스토리</div>
+      <table>
+        <thead><tr><th class="center">버전</th><th>날짜</th><th>변경 내용</th><th>작성자</th></tr></thead>
+        <tbody>
+          <tr><td class="center">0.1</td><td>2026-03-13</td><td>초안 작성</td><td>CTO Team</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- 푸터 -->
+  <div class="footer">
+    <span>Idea C: 이미지 기반 자동 분류/검색 시스템 (미채택) &mdash; 2026-03-13</span>
+    <span>국민대학교 AWS&middot;양자통신융합전공</span>
+  </div>
+
+</div>
+</body>
+</html>
