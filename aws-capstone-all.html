@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS 캡스톤 — AI 학습 도우미 챗봇 (StudyBot)</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e1a;--surface:#111827;--card:#1e293b;--border:#334155;
+  --text:#e2e8f0;--text2:#94a3b8;--accent:#3b82f6;--accent2:#8b5cf6;
+  --green:#10b981;--orange:#f59e0b;--red:#ef4444;--pink:#ec4899;
+  --gradient:linear-gradient(135deg,#3b82f6,#8b5cf6,#ec4899);
+  --glass:rgba(30,41,59,0.6);--radius:16px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+h1,h2,h3,h4{font-weight:700;line-height:1.3}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(10,14,26,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 4px 30px rgba(0,0,0,0.5)}
+.nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:60px}
+.nav-logo{font-size:1.1rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:6px;flex-wrap:wrap}
+.nav-links a{padding:6px 14px;border-radius:8px;font-size:.82rem;color:var(--text2);transition:all .2s}
+.nav-links a:hover,.nav-links a.active{color:#fff;background:rgba(59,130,246,0.2)}
+@media(max-width:768px){.nav-links{display:none}}
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(59,130,246,0.15),transparent 50%),radial-gradient(circle at 70% 60%,rgba(139,92,246,0.12),transparent 50%),radial-gradient(circle at 50% 80%,rgba(236,72,153,0.08),transparent 40%);animation:heroGlow 8s ease-in-out infinite alternate}
+@keyframes heroGlow{0%{transform:scale(1) rotate(0deg)}100%{transform:scale(1.1) rotate(3deg)}}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;border-radius:50px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);font-size:.85rem;color:var(--accent);margin-bottom:24px;animation:fadeUp .8s ease-out}
+.hero h1{font-size:clamp(2.2rem,5vw,3.8rem);margin-bottom:16px;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:fadeUp .8s ease-out .1s both}
+.hero p{font-size:1.15rem;color:var(--text2);max-width:700px;margin-bottom:40px;animation:fadeUp .8s ease-out .2s both}
+.hero-stats{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;animation:fadeUp .8s ease-out .3s both}
+.stat{text-align:center}.stat-num{font-size:2rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:.8rem;color:var(--text2);margin-top:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+section{max-width:1200px;margin:0 auto;padding:80px 24px}
+.section-title{font-size:2rem;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.section-title .icon{font-size:1.6rem}
+.section-sub{color:var(--text2);margin-bottom:40px;font-size:1rem}
+.card{background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:var(--radius);padding:28px;transition:transform .3s,box-shadow .3s}
+.card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(59,130,246,0.15)}
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.grid-4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.value-card{position:relative;overflow:hidden;padding-left:20px}
+.value-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:2px}
+.value-card:nth-child(1)::before{background:var(--red)}.value-card:nth-child(2)::before{background:var(--accent)}
+.value-card:nth-child(3)::before{background:var(--green)}.value-card:nth-child(4)::before{background:var(--accent2)}
+.value-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.value-card:nth-child(1) .value-label{color:var(--red)}.value-card:nth-child(2) .value-label{color:var(--accent)}
+.value-card:nth-child(3) .value-label{color:var(--green)}.value-card:nth-child(4) .value-label{color:var(--accent2)}
+.tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.tab{padding:10px 24px;border-radius:10px;background:var(--card);border:1px solid var(--border);cursor:pointer;font-size:.9rem;color:var(--text2);transition:all .3s}
+.tab:hover{border-color:var(--accent)}.tab.active{background:rgba(59,130,246,0.15);border-color:var(--accent);color:#fff}
+.tab-panel{display:none;animation:fadeIn .4s ease}.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.styled-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:12px;overflow:hidden;border:1px solid var(--border);font-size:.88rem}
+.styled-table th{background:var(--card);padding:12px 16px;text-align:left;color:var(--text2);font-weight:600;font-size:.8rem;border-bottom:1px solid var(--border)}
+.styled-table td{padding:12px 16px;border-bottom:1px solid rgba(51,65,85,0.4)}
+.styled-table tr:last-child td{border-bottom:none}.styled-table tr:hover td{background:rgba(59,130,246,0.05)}
+.compare-table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:12px;border:1px solid var(--border)}
+.compare-table th{background:var(--card);padding:14px 16px;text-align:left;font-size:.85rem;color:var(--text2);border-bottom:1px solid var(--border)}
+.compare-table td{padding:14px 16px;border-bottom:1px solid rgba(51,65,85,0.5);font-size:.9rem}
+.compare-table tr:last-child td{border-bottom:none}.compare-table .winner{color:var(--green);font-weight:600}
+.decision-box{padding:24px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px}
+.arch-container{position:relative;width:100%;overflow-x:auto}
+.arch-svg{width:100%;min-width:700px;max-width:900px;margin:0 auto;display:block}
+.arch-node{cursor:pointer;transition:filter .3s}.arch-node:hover{filter:brightness(1.3) drop-shadow(0 0 12px rgba(59,130,246,0.5))}
+.arch-tooltip{position:absolute;background:var(--card);border:1px solid var(--accent);border-radius:12px;padding:16px;max-width:280px;pointer-events:none;opacity:0;transition:opacity .3s;z-index:10;font-size:.85rem}
+.arch-tooltip.show{opacity:1}.arch-tooltip h4{color:var(--accent);margin-bottom:6px}
+.flow-line{stroke-dasharray:8 4;animation:flowDash 1.5s linear infinite}
+@keyframes flowDash{to{stroke-dashoffset:-24}}
+.timeline{position:relative;padding:20px 0}
+.tl-track{display:flex;gap:0;overflow-x:auto;padding-bottom:20px;scroll-snap-type:x mandatory}
+.tl-week{flex:0 0 calc(100%/5);min-width:160px;scroll-snap-align:start;padding:12px 8px;position:relative}
+.tl-bar{height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;cursor:pointer;transition:transform .2s,box-shadow .2s;position:relative}
+.tl-bar:hover{transform:scaleY(1.15);box-shadow:0 4px 20px rgba(59,130,246,0.3)}
+.tl-bar.phase1{background:linear-gradient(135deg,#3b82f6,#60a5fa)}
+.tl-bar.phase2{background:linear-gradient(135deg,#8b5cf6,#a78bfa)}
+.tl-bar.phase3{background:linear-gradient(135deg,#10b981,#34d399)}
+.tl-bar.phase4{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+.tl-bar.phase5{background:linear-gradient(135deg,#ec4899,#f472b6)}
+.tl-bar.phase6{background:linear-gradient(135deg,#06b6d4,#22d3ee)}
+.tl-bar.phase7{background:linear-gradient(135deg,#ef4444,#f87171)}
+.tl-bar.milestone{box-shadow:0 0 0 3px #fff,0 0 0 5px var(--orange)}
+.tl-label{text-align:center;margin-top:10px;font-size:.72rem;color:var(--text2);line-height:1.4}
+.tl-week-num{text-align:center;font-size:.7rem;color:var(--text2);margin-bottom:6px;font-weight:600}
+.tl-detail{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--accent);border-radius:16px;padding:28px;max-width:400px;width:90%;z-index:1001;animation:fadeIn .3s}
+.tl-detail.show{display:block}.tl-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000}.tl-overlay.show{display:block}
+.tl-detail h3{color:var(--accent);margin-bottom:12px}.tl-detail .close-btn{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--text2);font-size:1.2rem;cursor:pointer}
+.cost-sim{background:var(--glass);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-top:24px}
+.slider-group{margin-bottom:24px}
+.slider-group label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:.9rem}
+.slider-group label span{color:var(--accent);font-weight:700}
+input[type="range"]{width:100%;height:6px;border-radius:3px;background:var(--border);outline:none;-webkit-appearance:none;appearance:none}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px rgba(59,130,246,0.4)}
+.cost-result{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:20px}
+.cost-card{text-align:center;padding:20px;border-radius:12px;background:var(--bg)}
+.cost-card .cost-val{font-size:1.8rem;font-weight:800;margin:8px 0 4px}.cost-card .cost-label{font-size:.8rem;color:var(--text2)}
+.cost-bar-wrap{margin-top:24px}
+.cost-bar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.cost-bar-name{width:120px;font-size:.85rem;text-align:right}
+.cost-bar-track{flex:1;height:28px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
+.cost-bar-fill{height:100%;border-radius:6px;transition:width 1s ease;display:flex;align-items:center;padding-left:10px;font-size:.75rem;font-weight:700;width:0}
+.risk-grid{display:grid;grid-template-columns:40px repeat(3,1fr);grid-template-rows:auto repeat(3,80px);gap:4px}
+.risk-axis-label{display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--text2);font-weight:600}
+.risk-cell{border-radius:8px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;padding:4px;transition:transform .2s;cursor:default}
+.risk-cell:hover{transform:scale(1.05)}
+.risk-cell.low-low{background:rgba(16,185,129,0.15)}.risk-cell.low-mid{background:rgba(245,158,11,0.1)}.risk-cell.low-high{background:rgba(245,158,11,0.2)}
+.risk-cell.mid-low{background:rgba(245,158,11,0.1)}.risk-cell.mid-mid{background:rgba(245,158,11,0.25)}.risk-cell.mid-high{background:rgba(239,68,68,0.2)}
+.risk-cell.high-low{background:rgba(245,158,11,0.2)}.risk-cell.high-mid{background:rgba(239,68,68,0.2)}.risk-cell.high-high{background:rgba(239,68,68,0.35)}
+.risk-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;transition:transform .2s}
+.risk-dot:hover{transform:scale(1.3)}
+.demo-sim{position:relative;background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.demo-screen{min-height:340px;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.demo-step-indicator{display:flex;gap:8px;padding:16px;justify-content:center;background:var(--bg)}
+.demo-dot{width:10px;height:10px;border-radius:50%;background:var(--border);transition:all .3s}
+.demo-dot.active{background:var(--accent);width:28px;border-radius:5px}
+.demo-controls{display:flex;gap:12px;justify-content:center;padding:16px;background:var(--bg)}
+.demo-btn{padding:10px 28px;border-radius:10px;border:none;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+.demo-btn.primary{background:var(--accent);color:#fff}.demo-btn.primary:hover{background:#2563eb}
+.demo-btn.secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.demo-icon{font-size:3rem;margin-bottom:16px}.demo-title{font-size:1.2rem;font-weight:700;margin-bottom:8px}
+.demo-desc{color:var(--text2);font-size:.9rem;max-width:400px}
+.demo-chat{width:100%;max-width:420px;text-align:left;margin-top:16px}
+.demo-msg{padding:12px 16px;border-radius:12px;margin-bottom:8px;font-size:.88rem;animation:msgIn .4s ease}
+.demo-msg.user{background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.3);margin-left:40px;border-bottom-right-radius:4px}
+.demo-msg.ai{background:var(--bg);border:1px solid var(--border);margin-right:40px;border-bottom-left-radius:4px}
+.demo-msg .source{font-size:.75rem;color:var(--green);margin-top:6px;font-style:italic}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.typing-dots{display:inline-flex;gap:4px;padding:4px 0}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--text2);animation:typing .8s ease-in-out infinite}
+.typing-dots span:nth-child(2){animation-delay:.15s}.typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes typing{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.highlight{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:.82rem;font-weight:600}
+.hl-green{background:rgba(16,185,129,0.15);color:var(--green)}.hl-blue{background:rgba(59,130,246,0.15);color:var(--accent)}
+.hl-orange{background:rgba(245,158,11,0.15);color:var(--orange)}.hl-red{background:rgba(239,68,68,0.15);color:var(--red)}
+.hl-purple{background:rgba(139,92,246,0.15);color:var(--accent2)}
+footer{text-align:center;padding:60px 24px;color:var(--text2);font-size:.85rem;border-top:1px solid var(--border)}
+footer .version{margin-top:8px;font-size:.75rem}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+@keyframes pulse{0%,100%{opacity:.7}50%{opacity:1}}
+</style>
+</head>
+<body>
+<nav id="navbar"><div class="nav-inner"><div class="nav-logo">StudyBot AWS</div><div class="nav-links">
+<a href="#overview">개요</a><a href="#ideas">아이디어</a><a href="#architecture">아키텍처</a>
+<a href="#timeline">타임라인</a><a href="#cost">비용</a><a href="#risk">리스크</a><a href="#mvp">MVP</a><a href="#demo">데모</a>
+</div></div></nav>
+
+<header class="hero" id="top">
+  <div class="hero-badge">🎓 국민대학교 AWS·양자통신융합전공 캡스톤</div>
+  <h1>AI 학습 도우미 챗봇</h1>
+  <p>PDF를 업로드하면 AI가 해당 문서를 기반으로 질문에 답변하는 <strong>RAG 챗봇</strong>을 AWS 완전 서버리스 아키텍처로 구축합니다.</p>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num counter" data-target="15">0</div><div class="stat-label">개발 기간 (주)</div></div>
+    <div class="stat"><div class="stat-num">$<span class="counter" data-target="5">0</span>~8</div><div class="stat-label">15주 총 비용</div></div>
+    <div class="stat"><div class="stat-num counter" data-target="0">0</div><div class="stat-label">EC2 인스턴스</div></div>
+    <div class="stat"><div class="stat-num counter" data-target="11">0</div><div class="stat-label">AWS 서비스</div></div>
+  </div>
+</header>
+
+<section id="overview">
+  <h2 class="section-title reveal"><span class="icon">📋</span> 프로젝트 개요</h2>
+  <p class="section-sub reveal">AWS실전프로젝트I (1670501-01) — 박준석 교수 — 2026-03-06 ~ 2026-06-12</p>
+  <div class="grid grid-4 reveal">
+    <div class="card value-card"><div class="value-label">Problem</div><p>학생이 교과서를 복습할 때 즉각적 Q&A 도구가 없어 학습 효율 저하</p></div>
+    <div class="card value-card"><div class="value-label">Solution</div><p>PDF → RAG 파이프라인 → Bedrock LLM이 근거 기반 답변 생성</p></div>
+    <div class="card value-card"><div class="value-label">UX Effect</div><p>문서 업로드 후 즉시 대화형 Q&A, 답변마다 출처(페이지) 표시</p></div>
+    <div class="card value-card"><div class="value-label">Core Value</div><p>완전 서버리스, 월 운영비 $1 미만, 청소년 교육 접근성 향상</p></div>
+  </div>
+  <div style="margin-top:32px"><h3 class="reveal" style="font-size:1.1rem;margin-bottom:16px">📊 평가 기준</h3>
+  <div class="grid grid-2 reveal"><div>
+    <table class="styled-table"><thead><tr><th>항목</th><th>비중</th><th>전략</th></tr></thead><tbody>
+    <tr><td>중간고사</td><td><strong>20%</strong></td><td>8주차 MVP 데모</td></tr>
+    <tr><td>기말고사</td><td><strong>30%</strong></td><td>최종 발표 + 데모</td></tr>
+    <tr><td>프로젝트</td><td><strong>30%</strong></td><td>설계 + 구현 완성도</td></tr>
+    <tr><td>과제물</td><td><strong>10%</strong></td><td>기술 문서</td></tr>
+    <tr><td>출석+참여</td><td><strong>10%</strong></td><td>매주 금 09~12시</td></tr>
+    </tbody></table></div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:12px">
+      <div><span class="highlight hl-green">✅ AI 활용 전면 허용</span></div>
+      <div><span class="highlight hl-blue">🏫 공적가치: 청소년 → 교육</span></div>
+      <div><span class="highlight hl-purple">👥 팀 규모: 2~3인</span></div>
+      <div><span class="highlight hl-orange">🧑‍🏫 AWS Proserve 멘토링</span></div>
+    </div></div></div>
+</section>
+
+<section id="ideas">
+  <h2 class="section-title reveal"><span class="icon">💡</span> 아이디어 탐색 및 선정</h2>
+  <p class="section-sub reveal">3개 아이디어를 비교 분석 후 최종 선정</p>
+  <div class="tabs reveal">
+    <div class="tab active" data-tab="compare">📊 비교 분석</div>
+    <div class="tab" data-tab="ideaA">A. RAG 챗봇</div>
+    <div class="tab" data-tab="ideaB">B. 뉴스 감정분석</div>
+    <div class="tab" data-tab="ideaC">C. 이미지 검색</div>
+  </div>
+  <div class="tab-panel active" id="tab-compare">
+    <table class="compare-table"><thead><tr><th>항목</th><th>A. RAG 챗봇</th><th>B. 뉴스 감정분석</th><th>C. 이미지 검색</th></tr></thead><tbody>
+    <tr><td>15주 총 비용</td><td class="winner">$5~8</td><td>$8~50</td><td>$270+</td></tr>
+    <tr><td>구현 난이도</td><td class="winner">★★☆</td><td>★★☆</td><td>★★★☆</td></tr>
+    <tr><td>공적가치 부합</td><td class="winner">✅ 직접 (교육)</td><td>⚠️ 간접</td><td>⚠️ 간접</td></tr>
+    <tr><td>취업 어필</td><td class="winner">RAG = 최고 트렌드</td><td>데이터 엔지니어링</td><td>멀티모달 AI</td></tr>
+    <tr><td>핵심 서비스</td><td>Bedrock + S3 Vectors</td><td>EventBridge + Comprehend</td><td>Rekognition + AOSS</td></tr>
+    <tr><td>비용 리스크</td><td class="winner">매우 낮음</td><td>낮음</td><td style="color:var(--red)">❌ 높음</td></tr>
+    </tbody></table>
+    <div class="decision-box" style="margin-top:20px">
+      <strong style="color:var(--green);font-size:1.1rem">✅ 선정: 아이디어 A — AI 학습 도우미 챗봇</strong>
+      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.9rem">
+        <div>1. 공적가치("청소년-교육") 유일 직접 부합</div><div>2. 15주 비용 $5~8 (크레딧의 5~8%)</div>
+        <div>3. RAG = 2026년 산업계 최고 수요</div><div>4. Bedrock → 멘토 적극 서포트</div></div></div>
+  </div>
+  <div class="tab-panel" id="tab-ideaA"><div class="card"><h3 style="color:var(--green);margin-bottom:12px">A. AI 학습 도우미 챗봇 (RAG)</h3><p>교과서 PDF 업로드 → AI가 문서 기반 질문 답변 + 출처 표시</p><div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px"><span class="highlight hl-blue">Bedrock KB</span><span class="highlight hl-green">S3 Vectors</span><span class="highlight hl-purple">Claude 3 Haiku</span><span class="highlight hl-orange">Titan Embedding V2</span></div></div></div>
+  <div class="tab-panel" id="tab-ideaB"><div class="card"><h3 style="color:var(--orange);margin-bottom:12px">B. 실시간 뉴스 감정 분석 대시보드</h3><p>뉴스 RSS/API 자동 수집 → Comprehend 감정 분석 → 실시간 대시보드</p><div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px"><span class="highlight hl-blue">EventBridge</span><span class="highlight hl-orange">Comprehend</span><span class="highlight hl-purple">DynamoDB</span></div><p style="margin-top:12px;color:var(--red);font-size:.85rem">❌ 탈락: 차별화 약함, 공적가치 간접적</p></div></div>
+  <div class="tab-panel" id="tab-ideaC"><div class="card"><h3 style="color:var(--red);margin-bottom:12px">C. 이미지 자동 분류·검색 시스템</h3><p>이미지 업로드 → Rekognition 자동 태깅 → 벡터 유사 검색</p><div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px"><span class="highlight hl-blue">Rekognition</span><span class="highlight hl-red">OpenSearch Serverless</span><span class="highlight hl-purple">Titan Multimodal</span></div><p style="margin-top:12px;color:var(--red);font-size:.85rem">❌ 탈락: OpenSearch Serverless 월 $173+ → 비용 리스크 과대</p></div></div>
+</section>
+
+<section id="architecture">
+  <h2 class="section-title reveal"><span class="icon">🏗️</span> 시스템 아키텍처</h2>
+  <p class="section-sub reveal">완전 서버리스 — EC2 인스턴스 제로</p>
+  <div class="arch-container reveal">
+    <svg class="arch-svg" viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+      <line x1="400" y1="70" x2="400" y2="130" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="400" y1="190" x2="400" y2="240" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="280" y1="280" x2="180" y2="330" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="400" y1="280" x2="400" y2="330" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="520" y1="280" x2="620" y2="330" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="180" y1="390" x2="180" y2="430" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="400" y1="390" x2="400" y2="430" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="400" y1="390" x2="550" y2="430" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="180" y1="430" x2="300" y2="430" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <line x1="300" y1="430" x2="400" y2="430" stroke="#3b82f6" stroke-width="2" class="flow-line"/>
+      <line x1="450" y1="455" x2="660" y2="455" stroke="#334155" stroke-width="2" class="flow-line"/>
+      <g class="arch-node" data-info="user"><circle cx="400" cy="45" r="25" fill="#1e293b" stroke="#60a5fa" stroke-width="2"/><text x="400" y="50" text-anchor="middle" fill="#e2e8f0" font-size="14">👤</text></g>
+      <g class="arch-node" data-info="cloudfront"><rect x="310" y="130" width="180" height="60" rx="12" fill="#1e293b" stroke="#60a5fa" stroke-width="2"/><text x="400" y="155" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="700">CloudFront + S3</text><text x="400" y="175" text-anchor="middle" fill="#94a3b8" font-size="10">React SPA</text></g>
+      <g class="arch-node" data-info="apigw"><rect x="310" y="240" width="180" height="50" rx="12" fill="#1e293b" stroke="#a78bfa" stroke-width="2"/><text x="400" y="262" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="700">API Gateway</text><text x="400" y="278" text-anchor="middle" fill="#94a3b8" font-size="9">REST API (6 endpoints)</text></g>
+      <g class="arch-node" data-info="lambda-upload"><rect x="100" y="330" width="160" height="60" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/><text x="180" y="355" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Lambda: upload</text><text x="180" y="375" text-anchor="middle" fill="#94a3b8" font-size="9">presign + complete</text></g>
+      <g class="arch-node" data-info="lambda-chat"><rect x="310" y="330" width="180" height="60" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/><text x="400" y="355" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Lambda: chat</text><text x="400" y="375" text-anchor="middle" fill="#94a3b8" font-size="9">RetrieveAndGenerate</text></g>
+      <g class="arch-node" data-info="lambda-docs"><rect x="540" y="330" width="160" height="60" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/><text x="620" y="355" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">Lambda: documents</text><text x="620" y="375" text-anchor="middle" fill="#94a3b8" font-size="9">CRUD</text></g>
+      <g class="arch-node" data-info="s3-docs"><rect x="100" y="430" width="140" height="50" rx="10" fill="#1e293b" stroke="#34d399" stroke-width="2"/><text x="170" y="455" text-anchor="middle" fill="#34d399" font-size="10" font-weight="700">S3 Bucket</text><text x="170" y="468" text-anchor="middle" fill="#94a3b8" font-size="9">원본 PDF</text></g>
+      <g class="arch-node" data-info="bedrock-kb"><rect x="290" y="430" width="160" height="50" rx="10" fill="#1e293b" stroke="#ec4899" stroke-width="2"/><text x="370" y="455" text-anchor="middle" fill="#ec4899" font-size="10" font-weight="700">Bedrock KB</text><text x="370" y="468" text-anchor="middle" fill="#94a3b8" font-size="9">청킹+임베딩+검색</text></g>
+      <g class="arch-node" data-info="s3-vectors"><rect x="490" y="430" width="140" height="50" rx="10" fill="#1e293b" stroke="#22d3ee" stroke-width="2"/><text x="560" y="455" text-anchor="middle" fill="#22d3ee" font-size="10" font-weight="700">S3 Vectors</text><text x="560" y="468" text-anchor="middle" fill="#94a3b8" font-size="9">벡터 저장/검색</text></g>
+      <g class="arch-node" data-info="claude"><rect x="660" y="430" width="120" height="50" rx="10" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/><text x="720" y="455" text-anchor="middle" fill="#fbbf24" font-size="10" font-weight="700">Claude Haiku</text><text x="720" y="468" text-anchor="middle" fill="#94a3b8" font-size="9">답변 생성</text></g>
+    </svg>
+    <div class="arch-tooltip" id="archTooltip"></div>
+  </div>
+  <p style="text-align:center;color:var(--text2);font-size:.82rem;margin-top:8px">💡 각 서비스를 클릭하면 상세 정보를 볼 수 있습니다</p>
+  <h3 class="reveal" style="margin-top:40px;font-size:1.1rem;margin-bottom:16px">🔑 핵심 설계 결정 (ADR)</h3>
+  <table class="styled-table reveal"><thead><tr><th>결정</th><th>선택</th><th>기각</th><th>근거</th></tr></thead><tbody>
+  <tr><td>벡터DB</td><td><strong style="color:var(--green)">S3 Vectors</strong></td><td>OpenSearch ($350/월)</td><td>99.9% 비용 절감</td></tr>
+  <tr><td>RAG</td><td><strong style="color:var(--green)">Bedrock KB</strong></td><td>LangChain 직접 구현</td><td>코드량 80% 감소</td></tr>
+  <tr><td>LLM</td><td><strong style="color:var(--green)">Claude 3 Haiku</strong></td><td>Sonnet, Titan</td><td>비용 최저 + 충분</td></tr>
+  <tr><td>임베딩</td><td><strong style="color:var(--green)">Titan V2</strong></td><td>Cohere</td><td>AWS 네이티브, 최저가</td></tr>
+  <tr><td>프론트</td><td><strong style="color:var(--green)">React + Vite</strong></td><td>Next.js</td><td>SSR 불필요</td></tr>
+  <tr><td>백엔드</td><td><strong style="color:var(--green)">Python 3.12</strong></td><td>TypeScript</td><td>boto3 기본 포함</td></tr>
+  <tr><td>IaC</td><td><strong style="color:var(--green)">AWS SAM</strong></td><td>CDK, Terraform</td><td>학습 곡선 낮음</td></tr>
+  </tbody></table>
+</section>
+
+<section id="timeline">
+  <h2 class="section-title reveal"><span class="icon">📅</span> 개발 타임라인</h2>
+  <p class="section-sub reveal">수업계획서 연동 — 15주 로드맵 (각 주차를 클릭하세요)</p>
+  <div class="timeline reveal"><div class="tl-track" id="tlTrack"></div></div>
+  <div class="tl-overlay" id="tlOverlay"></div>
+  <div class="tl-detail" id="tlDetail"><button class="close-btn" id="tlClose">✕</button><h3 id="tlTitle"></h3><p id="tlContent"></p></div>
+</section>
+
+<section id="cost">
+  <h2 class="section-title reveal"><span class="icon">💰</span> 비용 분석</h2>
+  <p class="section-sub reveal">15주 총 비용 $5~8 — 학생 크레딧의 5~8%</p>
+  <div class="cost-sim reveal">
+    <h3 style="margin-bottom:20px">🧮 비용 시뮬레이터</h3>
+    <div class="slider-group"><label>일일 질문 수 <span id="qVal">10</span>회/일</label><input type="range" min="1" max="100" value="10" id="qSlider"></div>
+    <div class="slider-group"><label>월간 업로드 문서 수 <span id="dVal">5</span>개/월</label><input type="range" min="1" max="50" value="5" id="dSlider"></div>
+    <div class="cost-result">
+      <div class="cost-card"><div class="cost-label">월 Bedrock LLM</div><div class="cost-val" id="costLLM" style="color:var(--accent)">$0.50</div></div>
+      <div class="cost-card"><div class="cost-label">월 임베딩</div><div class="cost-val" id="costEmbed" style="color:var(--accent2)">$0.02</div></div>
+      <div class="cost-card"><div class="cost-label">월 S3 Vectors</div><div class="cost-val" id="costVec" style="color:var(--green)">$0.04</div></div>
+      <div class="cost-card"><div class="cost-label">월 합계</div><div class="cost-val" id="costTotal" style="color:var(--orange)">$0.56</div></div>
+    </div>
+    <div class="cost-bar-wrap" style="margin-top:32px"><h4 style="margin-bottom:16px;font-size:.95rem">벡터DB 월 비용 비교</h4>
+      <div class="cost-bar-row"><div class="cost-bar-name" style="color:var(--green)">S3 Vectors</div><div class="cost-bar-track"><div class="cost-bar-fill" style="background:var(--green)">$0.04</div></div></div>
+      <div class="cost-bar-row"><div class="cost-bar-name">pgvector</div><div class="cost-bar-track"><div class="cost-bar-fill" style="background:var(--orange)">$15</div></div></div>
+      <div class="cost-bar-row"><div class="cost-bar-name" style="color:var(--red)">OpenSearch</div><div class="cost-bar-track"><div class="cost-bar-fill" style="background:var(--red)">$350/월</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="risk">
+  <h2 class="section-title reveal"><span class="icon">⚠️</span> 리스크 관리</h2>
+  <p class="section-sub reveal">영향도 × 확률 매트릭스 (번호를 호버하세요)</p>
+  <div class="grid grid-2 reveal"><div>
+    <h4 style="margin-bottom:12px;font-size:.95rem">리스크 히트맵</h4>
+    <div class="risk-grid">
+      <div class="risk-axis-label"></div><div class="risk-axis-label">낮음</div><div class="risk-axis-label">중간</div><div class="risk-axis-label">높음</div>
+      <div class="risk-axis-label" style="writing-mode:vertical-rl;transform:rotate(180deg)">높음</div>
+      <div class="risk-cell high-low"><div class="risk-dot" style="background:var(--orange)" title="R7: 팀원 이탈">7</div></div>
+      <div class="risk-cell high-mid"><div class="risk-dot" style="background:var(--red)" title="R1: Bedrock 리전">1</div></div>
+      <div class="risk-cell high-high"></div>
+      <div class="risk-axis-label" style="writing-mode:vertical-rl;transform:rotate(180deg)">중간</div>
+      <div class="risk-cell mid-low"></div>
+      <div class="risk-cell mid-mid"><div class="risk-dot" style="background:var(--orange)" title="R3: PDF 파싱">3</div><div class="risk-dot" style="background:var(--orange)" title="R6: 비용 폭주">6</div><div class="risk-dot" style="background:var(--orange)" title="R8: 출처 추출">8</div><div class="risk-dot" style="background:var(--orange)" title="R9: API 악용">9</div></div>
+      <div class="risk-cell mid-high"><div class="risk-dot" style="background:var(--red)" title="R2: IAM 복잡">2</div></div>
+      <div class="risk-axis-label" style="writing-mode:vertical-rl;transform:rotate(180deg)">낮음</div>
+      <div class="risk-cell low-low"><div class="risk-dot" style="background:var(--green)" title="R5: 스로틀링">5</div></div>
+      <div class="risk-cell low-mid"></div>
+      <div class="risk-cell low-high"><div class="risk-dot" style="background:var(--orange)" title="R4: Cold Start">4</div></div>
+    </div>
+    <p style="font-size:.75rem;color:var(--text2);margin-top:8px;text-align:center">← 확률 → &nbsp;&nbsp; ↑ 영향도</p>
+  </div><div>
+    <h4 style="margin-bottom:12px;font-size:.95rem">리스크 상세</h4>
+    <table class="styled-table" style="font-size:.82rem"><thead><tr><th>#</th><th>리스크</th><th>대응</th></tr></thead><tbody>
+    <tr><td>1</td><td>Bedrock 리전 미지원</td><td>us-east-1 사용</td></tr>
+    <tr><td>2</td><td>IAM 권한 체인</td><td>4주차 멘토 리뷰</td></tr>
+    <tr><td>3</td><td>PDF 파싱 품질</td><td>Textract 대체</td></tr>
+    <tr><td>4</td><td>Lambda Cold Start</td><td>로딩 상태 표시</td></tr>
+    <tr><td>5</td><td>Bedrock 스로틀링</td><td>캡스톤 규모 미발생</td></tr>
+    <tr><td>6</td><td>비용 폭주</td><td>API Key + throttling</td></tr>
+    <tr><td>7</td><td>팀원 이탈</td><td>MVP 우선 확보</td></tr>
+    <tr><td style="color:var(--orange)">8</td><td style="color:var(--orange)">출처(페이지) 추출 불가</td><td><strong>3주차 PoC 검증</strong></td></tr>
+    <tr><td style="color:var(--orange)">9</td><td style="color:var(--orange)">인증 없는 API 악용</td><td><strong>10주차 API Key</strong></td></tr>
+    </tbody></table></div></div>
+</section>
+
+<section id="mvp">
+  <h2 class="section-title reveal"><span class="icon">🎯</span> MVP 정의 (8주차)</h2>
+  <p class="section-sub reveal">중간고사 — 프로젝트 중간 점검</p>
+  <div class="grid grid-2 reveal"><div>
+    <h4 style="margin-bottom:16px">P0 필수 기능</h4>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📄</span><span>PDF 업로드 (≤10MB)</span></div>
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🔄</span><span>문서 인덱싱 (Bedrock KB 자동)</span></div>
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">💬</span><span>질문-답변 (문서 기반)</span></div>
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">📌</span><span>출처 표시 (페이지/문단)</span></div>
+      <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px"><span style="font-size:1.2rem">🖥️</span><span>기본 채팅 UI</span></div>
+    </div></div><div>
+    <h4 style="margin-bottom:16px">고도화 기능 (8주차 이후)</h4>
+    <table class="styled-table"><thead><tr><th>기능</th><th>시기</th><th>순위</th></tr></thead><tbody>
+    <tr><td>대화 이력 유지</td><td>9주차</td><td><span class="highlight hl-blue">P1</span></td></tr>
+    <tr><td>다중 문서 지원</td><td>9주차</td><td><span class="highlight hl-blue">P1</span></td></tr>
+    <tr><td>문서 관리</td><td>9주차</td><td><span class="highlight hl-blue">P1</span></td></tr>
+    <tr><td>반응형 모바일</td><td>9주차</td><td><span class="highlight hl-purple">P2</span></td></tr>
+    <tr><td>퀴즈 자동 생성</td><td>여유 시</td><td><span class="highlight hl-orange">P3</span></td></tr>
+    <tr><td>학습 요약</td><td>여유 시</td><td><span class="highlight hl-orange">P3</span></td></tr>
+    </tbody></table></div></div>
+</section>
+
+<section id="demo">
+  <h2 class="section-title reveal"><span class="icon">🎮</span> MVP 데모 시뮬레이터</h2>
+  <p class="section-sub reveal">8주차 중간발표 데모 흐름을 체험해보세요</p>
+  <div class="demo-sim reveal">
+    <div class="demo-screen" id="demoScreen"></div>
+    <div class="demo-step-indicator" id="demoDots"></div>
+    <div class="demo-controls"><button class="demo-btn secondary" id="demoPrev">← 이전</button><button class="demo-btn primary" id="demoNext">다음 →</button></div>
+  </div>
+</section>
+
+<section id="diff">
+  <h2 class="section-title reveal"><span class="icon">🏆</span> 차별화 5대 포인트</h2>
+  <div class="grid grid-3 reveal" style="margin-top:24px">
+    <div class="card" style="border-top:3px solid var(--accent)"><div style="font-size:2rem;margin-bottom:12px">🆕</div><h4>최신 AWS 서비스</h4><p style="font-size:.88rem;color:var(--text2);margin-top:8px">S3 Vectors (2025.12 GA) + Bedrock Knowledge Bases</p></div>
+    <div class="card" style="border-top:3px solid var(--green)"><div style="font-size:2rem;margin-bottom:12px">⚡</div><h4>완전 서버리스</h4><p style="font-size:.88rem;color:var(--text2);margin-top:8px">EC2 제로 — Lambda + API GW + S3 + CloudFront + Bedrock</p></div>
+    <div class="card" style="border-top:3px solid var(--orange)"><div style="font-size:2rem;margin-bottom:12px">💸</div><h4>극한 비용 효율</h4><p style="font-size:.88rem;color:var(--text2);margin-top:8px">월 운영비 $1 미만, OpenSearch 대비 99.9% 절감</p></div>
+    <div class="card" style="border-top:3px solid var(--pink)"><div style="font-size:2rem;margin-bottom:12px">🎓</div><h4>공적가치</h4><p style="font-size:.88rem;color:var(--text2);margin-top:8px">청소년 학습 격차 해소를 위한 AI 튜터</p></div>
+    <div class="card" style="border-top:3px solid var(--accent2)"><div style="font-size:2rem;margin-bottom:12px">🚀</div><h4>확장 로드맵</h4><p style="font-size:.88rem;color:var(--text2);margin-top:8px">다국어 → 음성(Transcribe) → 이미지(Rekognition)</p></div>
+  </div>
+</section>
+
+<footer><p>AWS 캡스톤 프로젝트 기획 보고서 — AI 학습 도우미 챗봇 (StudyBot)</p><p class="version">v1.1 | 2026-03-15 | Draft | 국민대학교 AWS·양자통신융합전공</p></footer>
+
+<script>
+const nav=document.getElementById('navbar');
+window.addEventListener('scroll',()=>{
+  nav.classList.toggle('scrolled',window.scrollY>50);
+  document.querySelectorAll('section[id]').forEach(sec=>{
+    const top=sec.offsetTop-100,h=sec.offsetHeight;
+    const link=document.querySelector(`.nav-links a[href="#${sec.id}"]`);
+    if(link) link.classList.toggle('active',window.scrollY>=top&&window.scrollY<top+h);
+  });
+});
+const counters=document.querySelectorAll('.counter');
+const animateCounter=el=>{const target=+el.dataset.target,duration=1500,start=performance.now();
+const step=ts=>{const p=Math.min((ts-start)/duration,1);el.textContent=Math.floor(p*target);if(p<1)requestAnimationFrame(step)};requestAnimationFrame(step)};
+const heroObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){counters.forEach(animateCounter);heroObs.disconnect()}})},{threshold:0.5});
+document.querySelectorAll('.hero-stats').forEach(el=>heroObs.observe(el));
+const revealObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');revealObs.unobserve(e.target)}})},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>revealObs.observe(el));
+document.querySelectorAll('.tab').forEach(tab=>{tab.addEventListener('click',()=>{
+  const id=tab.dataset.tab;tab.closest('section').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  tab.closest('section').querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  tab.classList.add('active');document.getElementById('tab-'+id)?.classList.add('active')})});
+const archInfo={user:{title:'사용자',desc:'브라우저에서 React SPA 접속\nPDF 업로드 및 질문'},
+  cloudfront:{title:'CloudFront + S3',desc:'CDN + HTTPS 제공\n/api/* → API Gateway\n나머지 → S3 (CORS 회피)'},
+  apigw:{title:'API Gateway',desc:'REST API 6개 엔드포인트\n/api/upload, /api/chat, /api/documents'},
+  'lambda-upload':{title:'Lambda: upload',desc:'presign.py — Presigned URL 생성\n128MB / 10초 타임아웃\ncomplete.py — KB 동기화 트리거\n256MB / 30초 타임아웃'},
+  'lambda-chat':{title:'Lambda: chat',desc:'handler.py — RetrieveAndGenerate 호출\n256MB / 25초 타임아웃\nAPI GW 29초 리밋 고려'},
+  'lambda-docs':{title:'Lambda: documents',desc:'handler.py — 문서 목록/삭제 CRUD\n128MB / 10초 타임아웃'},
+  's3-docs':{title:'S3 Bucket (PDF)',desc:'원본 PDF 저장소\nBedrock KB 데이터 소스로 연결'},
+  'bedrock-kb':{title:'Bedrock Knowledge Bases',desc:'자동 청킹 (300~500 토큰)\nTitan Embedding V2 (1024차원)\nS3 Vectors에 인덱싱\nRAG 파이프라인 완전 자동화'},
+  's3-vectors':{title:'S3 Vectors',desc:'2025.12 GA 최신 서비스\n벡터 저장/검색 엔진\n월 $0.04 (OpenSearch의 1/8750)'},
+  claude:{title:'Claude 3 Haiku',desc:'답변 생성 LLM\n$0.25/1M 입력 토큰\n$1.25/1M 출력 토큰\n학습 Q&A에 충분한 품질'}};
+const tooltip=document.getElementById('archTooltip');
+document.querySelectorAll('.arch-node').forEach(node=>{node.addEventListener('click',e=>{
+  const info=archInfo[node.dataset.info];if(!info)return;
+  tooltip.innerHTML=`<h4>${info.title}</h4><p style="white-space:pre-line">${info.desc}</p>`;
+  const rect=node.getBoundingClientRect(),container=document.querySelector('.arch-container').getBoundingClientRect();
+  tooltip.style.left=Math.min(rect.left-container.left,container.width-290)+'px';
+  tooltip.style.top=(rect.bottom-container.top+8)+'px';tooltip.classList.add('show')})});
+document.addEventListener('click',e=>{if(!e.target.closest('.arch-node')&&!e.target.closest('.arch-tooltip'))tooltip.classList.remove('show')});
+const weeks=[
+  {w:1,d:'03/06',cls:'phase1',title:'오리엔테이션',content:'팀 빌딩, AWS 계정 설정\nBedrock Model Access 요청\n산출물: 팀 구성표'},
+  {w:2,d:'03/13',cls:'phase1',title:'주제 선정',content:'아이디어 탐색 (3안 비교)\n주제 선정\n산출물: 비교 분석'},
+  {w:3,d:'03/20',cls:'phase1',title:'요구사항+PoC',content:'요구사항 정의\nS3 Vectors + Bedrock KB PoC\n출처(페이지) 추출 검증\n산출물: PoC 결과'},
+  {w:4,d:'03/27',cls:'phase2',title:'아키텍처 설계',content:'설계 확정, SAM 템플릿\nIAM 설계\n산출물: 아키텍처 설계서'},
+  {w:5,d:'04/03',cls:'phase2',title:'데이터 전략',content:'Bedrock KB 생성\nS3 Vectors 연결, 인프라 구축\n산출물: KB 동기화 성공'},
+  {w:6,d:'04/10',cls:'phase3',title:'구현 I',content:'Lambda ×4 스캐폴딩\nRetrieveAndGenerate 연동\n출처 표시 검증\n🧑‍🏫 멘토링',mentor:true},
+  {w:7,d:'04/17',cls:'phase3',title:'구현 II',content:'React 채팅 UI\n파일 업로드 UI, API 연동\n산출물: 프로토타입\n🧑‍🏫 멘토링',mentor:true},
+  {w:8,d:'04/24',cls:'phase4',title:'★ MVP 발표',content:'MVP 통합 테스트\n중간고사 발표\n산출물: MVP 데모',milestone:true},
+  {w:9,d:'05/01',cls:'phase5',title:'고도화',content:'대화 이력, 다중 문서\nUI/UX 개선\n산출물: 고도화 기능'},
+  {w:10,d:'05/08',cls:'phase6',title:'보안 설계',content:'API Key/사용량 제한\nIAM 최소 권한 검증\nCloudWatch 알림\n산출물: 보안 설계서'},
+  {w:11,d:'05/15',cls:'phase6',title:'테스트',content:'사용자 테스트 (동료 학생)\n성능 테스트, 에러 검증\n산출물: 테스트 보고서'},
+  {w:12,d:'05/22',cls:'phase6',title:'문서화',content:'기술 문서 작성\n아키텍처 다이어그램\nAPI 문서\n산출물: 기술 문서'},
+  {w:13,d:'05/29',cls:'phase7',title:'발표 준비',content:'최종 기능 정리\n발표 자료 작성\n산출물: 발표 자료\n🧑‍🏫 멘토링',mentor:true},
+  {w:14,d:'06/05',cls:'phase7',title:'최종 멘토링',content:'데모 영상 제작\nProserve 최종 점검\n산출물: 데모 영상\n🧑‍🏫 멘토링',mentor:true},
+  {w:15,d:'06/12',cls:'phase7',title:'★ 최종 발표',content:'기말 발표 + 데모\n산출물: 최종 보고서',milestone:true}];
+const tlTrack=document.getElementById('tlTrack');
+weeks.forEach(w=>{const el=document.createElement('div');el.className='tl-week';
+  el.innerHTML=`<div class="tl-week-num">W${w.w} (${w.d})</div><div class="tl-bar ${w.cls} ${w.milestone?'milestone':''}" data-week="${w.w}">${w.title}</div><div class="tl-label">${w.mentor?'🧑‍🏫':''}</div>`;tlTrack.appendChild(el)});
+const tlDetail=document.getElementById('tlDetail'),tlOverlay=document.getElementById('tlOverlay');
+document.querySelectorAll('.tl-bar').forEach(bar=>{bar.addEventListener('click',()=>{
+  const w=weeks.find(x=>x.w===+bar.dataset.week);document.getElementById('tlTitle').textContent=`Week ${w.w}: ${w.title}`;
+  document.getElementById('tlContent').style.whiteSpace='pre-line';document.getElementById('tlContent').textContent=w.content;
+  tlDetail.classList.add('show');tlOverlay.classList.add('show')})});
+document.getElementById('tlClose').onclick=()=>{tlDetail.classList.remove('show');tlOverlay.classList.remove('show')};
+tlOverlay.onclick=()=>{tlDetail.classList.remove('show');tlOverlay.classList.remove('show')};
+const qSlider=document.getElementById('qSlider'),dSlider=document.getElementById('dSlider');
+const updateCost=()=>{const q=+qSlider.value,d=+dSlider.value;
+  document.getElementById('qVal').textContent=q;document.getElementById('dVal').textContent=d;
+  const llm=(q*30*(500*0.00000025+300*0.00000125));const embed=(d*50*200*0.00000011)+(q*30*200*0.00000011);
+  const vec=0.03+(q*30*0.000004);const total=llm+embed+vec;
+  document.getElementById('costLLM').textContent='$'+llm.toFixed(2);document.getElementById('costEmbed').textContent='$'+embed.toFixed(3);
+  document.getElementById('costVec').textContent='$'+vec.toFixed(3);document.getElementById('costTotal').textContent='$'+total.toFixed(2)};
+qSlider.oninput=updateCost;dSlider.oninput=updateCost;updateCost();
+const demoSteps=[
+  {icon:'🌐',title:'앱 접속',desc:'CloudFront URL로 StudyBot에 접속합니다'},
+  {icon:'📄',title:'PDF 업로드',desc:'"생물학 교과서.pdf" 파일을 드래그 앤 드롭으로 업로드합니다',html:'<div style="border:2px dashed var(--accent);border-radius:12px;padding:32px;margin-top:16px;text-align:center;color:var(--accent)"><div style="font-size:2rem;margin-bottom:8px">📄</div>생물학_교과서.pdf (4.2MB)<br><span style="font-size:.8rem;color:var(--green)">✅ 업로드 완료</span></div>'},
+  {icon:'⏳',title:'인덱싱 대기',desc:'Bedrock KB가 PDF를 자동으로 분석 중입니다',html:'<div style="margin-top:20px;width:80%;max-width:300px"><div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:6px"><span>인덱싱 진행 중...</span><span style="color:var(--green)">87%</span></div><div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:87%;height:100%;background:var(--green);border-radius:4px;animation:pulse 1.5s infinite"></div></div></div>'},
+  {icon:'💬',title:'질문하기',desc:'교과서 내용에 대해 질문합니다',html:'<div class="demo-chat"><div class="demo-msg user">세포 분열의 단계를 설명해줘</div><div class="demo-msg ai"><div class="typing-dots"><span></span><span></span><span></span></div></div></div>'},
+  {icon:'✨',title:'AI 답변 + 출처',desc:'문서 기반 답변과 함께 원문 출처가 표시됩니다',html:'<div class="demo-chat"><div class="demo-msg user">세포 분열의 단계를 설명해줘</div><div class="demo-msg ai">세포 분열은 크게 <strong>간기(G1→S→G2)</strong>와 <strong>분열기(M기)</strong>로 나뉩니다. 분열기는 전기→중기→후기→말기의 4단계로 진행되며...<div class="source">📌 출처: p.34 「제3장 세포분열」, p.37 「그림 3-5」</div></div></div>'},
+  {icon:'🔄',title:'추가 질문',desc:'이전 맥락을 유지하며 추가 질문이 가능합니다',html:'<div class="demo-chat"><div class="demo-msg user">감수분열과 체세포분열의 차이는?</div><div class="demo-msg ai">감수분열은 <strong>2회 연속 분열</strong>하여 염색체 수가 반감(2n→n)되지만, 체세포분열은 <strong>1회 분열</strong>로 염색체 수가 유지(2n→2n)됩니다...<div class="source">📌 출처: p.42 「감수분열의 특징」, p.45 「비교표 3-2」</div></div></div>'},
+  {icon:'🎉',title:'데모 완료!',desc:'PDF 업로드 → 인덱싱 → 질문 → 출처 기반 답변\n전체 파이프라인이 동작합니다'}];
+let demoStep=0;const demoScreen=document.getElementById('demoScreen'),demoDots=document.getElementById('demoDots');
+const renderDemo=()=>{const s=demoSteps[demoStep];
+  demoScreen.innerHTML=`<div class="demo-icon">${s.icon}</div><div class="demo-title">${s.title}</div><div class="demo-desc">${s.desc}</div>${s.html||''}`;
+  demoDots.innerHTML=demoSteps.map((_,i)=>`<div class="demo-dot ${i===demoStep?'active':''}"></div>`).join('')};
+renderDemo();
+document.getElementById('demoNext').onclick=()=>{demoStep=Math.min(demoStep+1,demoSteps.length-1);renderDemo()};
+document.getElementById('demoPrev').onclick=()=>{demoStep=Math.max(demoStep-1,0);renderDemo()};
+const costBarObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){
+  e.target.querySelectorAll('.cost-bar-fill').forEach((bar,i)=>{const widths=['3%','8%','100%'];setTimeout(()=>{bar.style.width=widths[i]},i*200)});
+  costBarObs.unobserve(e.target)}})},{threshold:0.3});
+document.querySelectorAll('.cost-bar-wrap').forEach(el=>costBarObs.observe(el));
+</script>
+</body>
+</html>
